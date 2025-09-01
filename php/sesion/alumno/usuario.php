@@ -78,12 +78,12 @@ $displayImage = file_exists($imagePath) ? $imagePath : $defaultImage;
 
 // Procesar cambio de imagen
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_image'])) {
-    // Primero, verificar errores de subida generales
+    // Verificar errores de subida generales
     if ($_FILES['user_image']['error'] !== UPLOAD_ERR_OK) {
         switch ($_FILES['user_image']['error']) {
             case UPLOAD_ERR_INI_SIZE:
             case UPLOAD_ERR_FORM_SIZE:
-                $uploadError = "El archivo excede el tamaño máximo permitido (5MB).";
+                $uploadError = "El archivo excede el tamaño máximo permitido (20MB).";
                 break;
             case UPLOAD_ERR_PARTIAL:
                 $uploadError = "La subida del archivo fue parcial.";
@@ -115,96 +115,132 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_image'])) {
         if (!isset($uploadError)) {
             $imageFileType = strtolower(pathinfo($_FILES["user_image"]["name"], PATHINFO_EXTENSION));
             $allowedFormats = ['jpg', 'jpeg', 'png', 'webp'];
+            $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
             // Verificar formato permitido antes de cualquier procesamiento
             if (!in_array($imageFileType, $allowedFormats)) {
-                error_log("Invalid file format: $imageFileType");
+                error_log("Invalid file extension: $imageFileType");
                 $uploadError = "Archivo no permitido. Solo se permiten JPG, JPEG, PNG y WEBP.";
             } else {
-                // Verificar si es una imagen real
-                $check = getimagesize($_FILES["user_image"]["tmp_name"]);
-                if ($check === false) {
-                    error_log("File is not an image: " . $_FILES["user_image"]["tmp_name"]);
-                    $uploadError = "El archivo no es una imagen válida.";
+                // Verificar MIME type real usando finfo
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeType = finfo_file($finfo, $_FILES["user_image"]["tmp_name"]);
+                finfo_close($finfo);
+
+                if (!in_array($mimeType, $allowedMimeTypes)) {
+                    error_log("Invalid MIME type: $mimeType for file: " . $_FILES["user_image"]["name"]);
+                    $uploadError = "Archivo no permitido. Solo se permiten JPG, JPEG, PNG y WEBP.";
                 } else {
-                    // Verificar tamaño del archivo (aunque ya manejado por PHP, doble chequeo)
-                    if ($_FILES["user_image"]["size"] > 5000000) { // 5MB
-                        error_log("File too large: " . $_FILES["user_image"]["size"]);
-                        $uploadError = "El archivo es muy grande. Máximo 5MB.";
+                    // Verificar si es una imagen real
+                    $imageInfo = @getimagesize($_FILES["user_image"]["tmp_name"]);
+                    if ($imageInfo === false || !in_array($imageInfo['mime'], $allowedMimeTypes)) {
+                        error_log("Invalid image or MIME type: " . ($_FILES["user_image"]["tmp_name"] . " MIME: " . ($imageInfo['mime'] ?? 'unknown')));
+                        $uploadError = "El archivo no es una imagen válida. Solo se permiten JPG, JPEG, PNG y WEBP.";
                     } else {
-                        // Determinar si WebP es soportado
-                        $useWebP = function_exists('imagewebp') && in_array($imageFileType, ['jpg', 'jpeg', 'png']);
-                        error_log("WebP support: " . ($useWebP ? "enabled" : "disabled"));
-                        $targetExtension = $useWebP ? 'webp' : $imageFileType;
-                        $targetFile .= '.' . $targetExtension;
+                        // Verificar tamaño del archivo
+                        if ($_FILES["user_image"]["size"] > 20000000) { // 20MB
+                            error_log("File too large: " . $_FILES["user_image"]["size"]);
+                            $uploadError = "El archivo es muy grande. Máximo 20MB.";
+                        } else {
+                            // Mapear extensión a MIME type para validación
+                            $extensionToMime = [
+                                'jpg' => 'image/jpeg',
+                                'jpeg' => 'image/jpeg',
+                                'png' => 'image/png',
+                                'webp' => 'image/webp'
+                            ];
 
-                        // Procesar la imagen
-                        $sourceImage = null;
-                        switch ($imageFileType) {
-                            case 'jpg':
-                            case 'jpeg':
-                                if (function_exists('imagecreatefromjpeg')) {
-                                    $sourceImage = imagecreatefromjpeg($_FILES["user_image"]["tmp_name"]);
-                                } else {
-                                    error_log("imagecreatefromjpeg not available");
-                                    $uploadError = "Formato JPEG no soportado por el servidor.";
-                                }
-                                break;
-                            case 'png':
-                                if (function_exists('imagecreatefrompng')) {
-                                    $sourceImage = imagecreatefrompng($_FILES["user_image"]["tmp_name"]);
-                                } else {
-                                    error_log("imagecreatefrompng not available");
-                                    $uploadError = "Formato PNG no soportado por el servidor.";
-                                }
-                                break;
-                            case 'webp':
-                                if (function_exists('imagecreatefromwebp')) {
-                                    $sourceImage = imagecreatefromwebp($_FILES["user_image"]["tmp_name"]);
-                                } else {
-                                    error_log("imagecreatefromwebp not available");
-                                    $uploadError = "Formato WEBP no soportado por el servidor.";
-                                }
-                                break;
-                        }
-
-                        if ($sourceImage) {
-                            if ($useWebP) {
-                                // Convertir a WebP si es soportado
-                                if (imagewebp($sourceImage, $targetFile, 80)) {
-                                    $uploadSuccess = "Imagen actualizada correctamente.";
-                                    $imageExtension = 'webp';
-                                } else {
-                                    error_log("Failed to save WebP image: $targetFile");
-                                    $uploadError = "Error al guardar la imagen en formato WebP.";
-                                }
+                            if ($extensionToMime[$imageFileType] !== $mimeType) {
+                                error_log("MIME type mismatch: extension $imageFileType, MIME $mimeType");
+                                $uploadError = "El tipo de archivo no coincide con la extensión. Solo se permiten JPG, JPEG, PNG y WEBP.";
                             } else {
-                                // Guardar en el formato original
+                                // Determinar si WebP es soportado
+                                $useWebP = function_exists('imagewebp') && in_array($imageFileType, ['jpg', 'jpeg', 'png']);
+                                error_log("WebP support: " . ($useWebP ? "enabled" : "disabled"));
+                                $targetExtension = $useWebP ? 'webp' : $imageFileType;
+                                $targetFile .= '.' . $targetExtension;
+
+                                // Procesar la imagen
+                                $sourceImage = null;
                                 switch ($imageFileType) {
                                     case 'jpg':
                                     case 'jpeg':
-                                        $saved = function_exists('imagejpeg') ? imagejpeg($sourceImage, $targetFile, 80) : false;
+                                        if (function_exists('imagecreatefromjpeg')) {
+                                            $sourceImage = @imagecreatefromjpeg($_FILES["user_image"]["tmp_name"]);
+                                            if ($sourceImage === false) {
+                                                error_log("Failed to create JPEG image: " . $_FILES["user_image"]["tmp_name"]);
+                                                $uploadError = "Error al procesar la imagen JPEG.";
+                                            }
+                                        } else {
+                                            error_log("imagecreatefromjpeg not available");
+                                            $uploadError = "Formato JPEG no soportado por el servidor.";
+                                        }
                                         break;
                                     case 'png':
-                                        $saved = function_exists('imagepng') ? imagepng($sourceImage, $targetFile) : false;
+                                        if (function_exists('imagecreatefrompng')) {
+                                            $sourceImage = @imagecreatefrompng($_FILES["user_image"]["tmp_name"]);
+                                            if ($sourceImage === false) {
+                                                error_log("Failed to create PNG image: " . $_FILES["user_image"]["tmp_name"]);
+                                                $uploadError = "Error al procesar la imagen PNG.";
+                                            }
+                                        } else {
+                                            error_log("imagecreatefrompng not available");
+                                            $uploadError = "Formato PNG no soportado por el servidor.";
+                                        }
                                         break;
                                     case 'webp':
-                                        $saved = copy($_FILES["user_image"]["tmp_name"], $targetFile);
+                                        if (function_exists('imagecreatefromwebp')) {
+                                            $sourceImage = @imagecreatefromwebp($_FILES["user_image"]["tmp_name"]);
+                                            if ($sourceImage === false) {
+                                                error_log("Failed to create WEBP image: " . $_FILES["user_image"]["tmp_name"]);
+                                                $uploadError = "Error al procesar la imagen WEBP.";
+                                            }
+                                        } else {
+                                            error_log("imagecreatefromwebp not available");
+                                            $uploadError = "Formato WEBP no soportado por el servidor.";
+                                        }
                                         break;
                                 }
-                                if (isset($saved) && $saved) {
-                                    $uploadSuccess = "Imagen actualizada correctamente.";
-                                    $imageExtension = $imageFileType;
-                                } else {
-                                    error_log("Failed to save image in original format: $targetFile");
-                                    $uploadError = "Error al guardar la imagen. Formato no soportado por el servidor.";
+
+                                if ($sourceImage) {
+                                    if ($useWebP) {
+                                        // Convertir a WebP si es soportado
+                                        if (@imagewebp($sourceImage, $targetFile, 80)) {
+                                            $uploadSuccess = "Imagen actualizada correctamente.";
+                                            $imageExtension = 'webp';
+                                        } else {
+                                            error_log("Failed to save WebP image: $targetFile");
+                                            $uploadError = "Error al guardar la imagen en formato WebP.";
+                                        }
+                                    } else {
+                                        // Guardar en el formato original
+                                        switch ($imageFileType) {
+                                            case 'jpg':
+                                            case 'jpeg':
+                                                $saved = function_exists('imagejpeg') ? @imagejpeg($sourceImage, $targetFile, 80) : false;
+                                                break;
+                                            case 'png':
+                                                $saved = function_exists('imagepng') ? @imagepng($sourceImage, $targetFile) : false;
+                                                break;
+                                            case 'webp':
+                                                $saved = @copy($_FILES["user_image"]["tmp_name"], $targetFile);
+                                                break;
+                                        }
+                                        if (isset($saved) && $saved) {
+                                            $uploadSuccess = "Imagen actualizada correctamente.";
+                                            $imageExtension = $imageFileType;
+                                        } else {
+                                            error_log("Failed to save image in original format: $targetFile");
+                                            $uploadError = "Error al guardar la imagen. Formato no soportado por el servidor.";
+                                        }
+                                    }
+                                    @imagedestroy($sourceImage);
+                                    $displayImage = $targetFile;
+                                } else if (!isset($uploadError)) {
+                                    error_log("Failed to create source image for: $imageFileType");
+                                    $uploadError = "Error al procesar la imagen. Formato no soportado o imagen corrupta.";
                                 }
                             }
-                            imagedestroy($sourceImage);
-                            $displayImage = $targetFile;
-                        } else {
-                            error_log("Failed to create source image for: $imageFileType");
-                            $uploadError = "Error al procesar la imagen. Formato no soportado por el servidor.";
                         }
                     }
                 }
@@ -332,13 +368,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_image'])) {
             <h3>Cambiar Imagen de Perfil</h3>
             <form method="post" enctype="multipart/form-data" id="imageUploadForm">
                 <div class="upload-area">
-                    <input type="file" name="user_image" id="user_image" accept="image/*" required>
+                    <input type="file" name="user_image" id="user_image" accept="image/jpeg,image/png,image/webp" required>
                     <label for="user_image">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         <span>Click para seleccionar imagen</span>
-                        <small>Formatos: JPG, PNG, WEBP (máx. 5MB)</small>
+                        <small>Formatos: JPG, PNG, WEBP (máx. 20MB)</small>
                     </label>
                 </div>
                 <div class="upload-buttons">
