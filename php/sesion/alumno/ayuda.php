@@ -67,7 +67,7 @@ ob_end_flush();
                 <h3>Paso 2: Navegación en el mapa</h3>
                 <p>Utiliza los controles de zoom (+/-) ubicados en la esquina inferior derecha del mapa para acercar o alejar la vista. Encima de estos controles se encuentra el botón de "Puntos de interés". Actívelo para que puedan visualizarse marcadores azules en el mapa. Al hacer clic en uno de ellos, podrá consultar la información de ese lugar. Algunos puntos incluyen además imágenes en 360°.</p>
                 <P>En el ordenador, también puedes usar la rueda del ratón.</P>
-                <P>En dispositivos móviles, usa los botones de zoom o el gesto de "pellizcar" en la pantalla.</P>
+                <P>En dispositivos móviles, usa los botones de zoom o el gesto de " pellizcar " en la pantalla.</P>
                 <div class="step-images-container">
                 <img class="step-image" src="../../../image/ayuda/alumno/index-pc-+-.png" alt="Acceso al mapa" onclick="openModal('../../../image/ayuda/alumno/index-pc-+-.png')">
                 <img class="step-image" src="../../../image/ayuda/alumno/index-mv-+-.png" alt="Acceso al mapa" onclick="openModal('../../../image/ayuda/alumno/index-mv-+-.png')">
