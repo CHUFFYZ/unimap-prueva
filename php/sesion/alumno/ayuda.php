@@ -29,6 +29,8 @@ if (isset($error)) {
     echo $error . " Redirigiendo...";
     header("Refresh: 1; URL=../sesion-alumn.php");
     exit();
+    
+    
 }
 
 ob_end_flush();
