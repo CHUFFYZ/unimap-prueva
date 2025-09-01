@@ -22,7 +22,7 @@
             <div class="step">
                 <h3>Paso 1: Acceso al mapa</h3>
                 <p>Ingresa al módulo de mapas desde la página principal de UNIMAP. Asegúrate de tener una conexión a internet estable para cargar el contenido.</p>
-                <img class="step-image" src="../image/sample1.jpg" alt="Acceso al mapa" onclick="openModal('../image/sample1.jpg')">
+                <img class="step-image" src="../../../image/ayuda/invitado/index.png" alt="Acceso al mapa" onclick="openModal('../../../image/ayuda/invitado/index.png')">
             </div>
             <div class="step">
                 <h3>Paso 2: Navegación en el mapa</h3>

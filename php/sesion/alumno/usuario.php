@@ -264,7 +264,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_image'])) {
     <button class="back-button" onclick="window.history.back()">Regresar</button>
     <div class="container">
         <h1>Perfil de Usuario</h1>
-        <p>Aquí puedes ver y gestionar tu información personal en UNIMAP.</p>
+        <p>Aquí puedes ver tu información personal en UNIMAP.</p>
 
         <?php if (isset($uploadError)): ?>
         <div class="error-box">
@@ -345,7 +345,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_image'])) {
 
         <div class="info-box">
             <p><strong>¿Necesitas actualizar tu información?</strong></p>
-            <p>Contáctanos enviando un correo a <a href="mailto:soporte@unacar.mx">soporte@unacar.mx</a> con los datos que deseas modificar. ¡Estamos aquí para ayudarte!</p>
+            <p>Contáctanos enviando un correo a <a href="mailto:soporte.uninap@gmail.com">soporte.uninap@gmail.com</a> con los datos que deseas modificar. ¡Estamos aquí para ayudarte!</p>
         </div>
 
         <div class="footer" id="footer-date">
@@ -374,7 +374,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_image'])) {
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         <span>Click para seleccionar imagen</span>
-                        <small>Formatos: JPG, PNG, WEBP (máx. 20MB)</small>
+                        <small>Formatos: JPG, JPEG, PNG, WEBP (máx. 20MB)</small>
                     </label>
                 </div>
                 <div class="upload-buttons">
