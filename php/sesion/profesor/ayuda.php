@@ -86,6 +86,27 @@ ob_end_flush();
                     <li><strong>Inicio</strong>: Restablecer a la vista completa</li>
                 </ul>
             </div>
+            <div class="step">
+                <h3>Navegadores compatibles</h3>
+                <p>Navegadores compatibles: Brave, Microsoft Edge, Chrome, Opera, Navegador de samsung, Navegador de Google</p>
+                <div class="step-images-container-n">
+                <img class="step-image-n" src="../../../image/iconos/navegadores/brave.png" alt="Acceso al mapa" onclick="openModal('../../../image/iconos/navegadores/brave.png')">
+                <img class="step-image-n" src="../../../image/iconos/navegadores/chrome.png" alt="Acceso al mapa" onclick="openModal('../../../image/iconos/navegadores/chrome.png')">
+                <img class="step-image-n" src="../../../image/iconos/navegadores/edge.png" alt="Acceso al mapa" onclick="openModal('../../../image/iconos/navegadores/edge.png')">
+                <img class="step-image-n" src="../../../image/iconos/navegadores/opera.png" alt="Acceso al mapa" onclick="openModal('../../../image/iconos/navegadores/opera.png')">
+                <img class="step-image-n" src="../../../image/iconos/navegadores/samsung.png" alt="Acceso al mapa" onclick="openModal('../../../image/iconos/navegadores/samsung.png')">
+                <img class="step-image-n" src="../../../image/iconos/navegadores/google.png" alt="Acceso al mapa" onclick="openModal('../../../image/iconos/navegadores/google.png')">
+                </div>
+            </div>
+            <div class="step">
+                <h3>Navegadores incompatibles</h3>
+                <p>Navegadores incompatibles: Opera GX, navegador integrado de Messenger, navegador integrado de telegram... todos los navegadores integrados de aplicaciones</p>
+                <div class="step-images-container-n">
+                <img class="step-image-n" src="../../../image/iconos/navegadores/Opera_GX_Icon.svg.png" alt="Acceso al mapa" onclick="openModal('../../../image/iconos/navegadores/Opera_GX_Icon.svg.png')">
+                <img class="step-image-n" src="../../../image/iconos/navegadores/messenger.png" alt="Acceso al mapa" onclick="openModal('../../../image/iconos/navegadores/messenger.png')">
+                <img class="step-image-n" src="../../../image/iconos/navegadores/telegram.png" alt="Acceso al mapa" onclick="openModal('../../../image/iconos/navegadores/telegram.png')">
+                </div>
+            </div>
             <!-- Puedes agregar más pasos aquí con o sin imágenes y el diseño se adaptará automáticamente -->
         </div>
 
