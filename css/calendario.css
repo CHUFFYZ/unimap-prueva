@@ -14,7 +14,6 @@ header {
     /*background: linear-gradient(135deg, #2c3e50, #3498db);*/
     background: linear-gradient( 135deg, rgb(0, 51, 102)   0%, rgb(20, 106, 192) 100%);
     color: white;
-    padding: 1rem;
     margin-left: 5px;
     margin-right: 5px;
     margin-top: 5px;
@@ -148,7 +147,7 @@ button:hover{
 
 @media (max-width: 600px) {
     header {
-        height: 12px;
+        height: 45px;
     }
    
 button {

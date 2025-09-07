@@ -1284,6 +1284,7 @@ border-bottom: 0px solid black !important;
 .leaflet-container {
     width: 100% !important;
     height: 100% !important;
+    /*background: #f8f7f7 !important;*/
 }
 /*fin opciones de leaflet----------------------------------------------------------------------------------------------*/
 /*pantalla de carga inicio---------------------------------------------------------------------------------------------*/

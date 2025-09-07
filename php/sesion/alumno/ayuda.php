@@ -48,7 +48,7 @@ ob_end_flush();
 <body>
     <button class="back-button" onclick="window.history.back()">Regresar</button>
     <div class="container">
-        <h1>Ayuda con UNIMAP</h1>
+        <h1>Ayuda con UNIMAP Alumnos</h1>
         <p>¿Tienes problemas con UNIMAP? ¡Estamos aquí para ayudarte! Envíanos un correo a <a href="mailto:soporte.uninap@gmail.com">soporte.uninap@gmail.com</a> o mediante inbox en nuestra pagina oficial de facebook <a href="https://www.facebook.com/people/UNIMAP-Mapa-Interactivo-Universitario/61576284754408/" target="_blank">UNIMAP-Mapa Interactivo Universitario </a> y te responderemos lo antes posible.</p>
         
         <h2>Cómo usar el mapa interactivo</h2>

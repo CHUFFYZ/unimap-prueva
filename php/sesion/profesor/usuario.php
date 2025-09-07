@@ -11,19 +11,19 @@ error_log("Session data on perfil-usuario.php: " . print_r($_SESSION, true));
 error_log("Session ID: " . session_id());
 error_log("Cookie lifetime: " . ini_get('session.cookie_lifetime'));
 
-$allowed = ['alumno'];
+$allowed = ['profesor'];
 
-if (!isset($_SESSION['alumno'])) {
-    error_log("Session 'alumno' not set");
+if (!isset($_SESSION['profesor'])) {
+    error_log("Session 'profesor' not set");
     $error = "Sesión no iniciada.";
-} elseif (!isset($_SESSION['alumno']['tipo']) || !in_array($_SESSION['alumno']['tipo'], $allowed)) {
-    error_log("Invalid or missing 'tipo': " . ($_SESSION['alumno']['tipo'] ?? 'not set'));
-    $error = "Acceso restringido a alumnos.";
-} elseif (!isset($_SESSION['alumno']['nombre']) || !isset($_SESSION['alumno']['apellido'])) {
+} elseif (!isset($_SESSION['profesor']['tipo']) || !in_array($_SESSION['profesor']['tipo'], $allowed)) {
+    error_log("Invalid or missing 'tipo': " . ($_SESSION['profesor']['tipo'] ?? 'not set'));
+    $error = "Acceso restringido a Docentes.";
+} elseif (!isset($_SESSION['profesor']['nombre']) || !isset($_SESSION['profesor']['apellido'])) {
     error_log("Missing 'nombre' or 'apellido'");
     $error = "Datos de usuario incompletos.";
-} elseif (!isset($_SESSION['alumno']['session_expiry']) || time() > $_SESSION['alumno']['session_expiry']) {
-    error_log("Session expired or 'session_expiry' not set. Current time: " . time() . ", Expiry: " . ($_SESSION['alumno']['session_expiry'] ?? 'not set'));
+} elseif (!isset($_SESSION['profesor']['session_expiry']) || time() > $_SESSION['profesor']['session_expiry']) {
+    error_log("Session expired or 'session_expiry' not set. Current time: " . time() . ", Expiry: " . ($_SESSION['profesor']['session_expiry'] ?? 'not set'));
     $error = "Sesión expirada.";
 }
 
@@ -32,12 +32,12 @@ if (isset($error)) {
     session_destroy();
     header("HTTP/1.1 403 Forbidden");
     echo $error . " Redirigiendo...";
-    header("Refresh: 1; URL=../sesion-alumn.php");
+    header("Refresh: 1; URL=../sesion-profe.php");
     exit();
 }
 
 // Obtener datos del usuario desde la sesión y la base de datos
-$matricula = $_SESSION['alumno']['matricula'];
+$matricula = $_SESSION['profesor']['matricula'];
 $userData = null;
 $dbError = null;
 
@@ -48,7 +48,7 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // Obtener datos del usuario
-    $stmt = $pdo->prepare("SELECT matricula, nombre, apellido, telefono, email, contrasena FROM alumnos WHERE matricula = :matricula");
+    $stmt = $pdo->prepare("SELECT matricula, nombre, apellido, telefono, email, contrasena FROM profesores WHERE matricula = :matricula");
     $stmt->execute([':matricula' => $matricula]);
     $userData = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -72,7 +72,7 @@ try {
 
 // Manejo de imagen de usuario
 $imageExtension = 'webp';
-$imagePath = "../../../image/usuarios/$matricula/{$matricula}user.$imageExtension";
+$imagePath = "../../../image/usuarios/profe/$matricula/{$matricula}user.$imageExtension";
 $defaultImage = "../../../image/usuarios/user-unknown/user.webp";
 $displayImage = file_exists($imagePath) ? $imagePath : $defaultImage;
 
@@ -306,19 +306,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_image'])) {
                     <div class="field">
                         <label>Matrícula:</label>
                         <div class="field-value">
-                            <span id="matricula"><?php echo htmlspecialchars($_SESSION['alumno']['matricula']); ?></span>
+                            <span id="matricula"><?php echo htmlspecialchars($_SESSION['profesor']['matricula']); ?></span>
                         </div>
                     </div>
                     <div class="field">
                         <label>Nombre:</label>
                         <div class="field-value">
-                            <span id="nombre"><?php echo htmlspecialchars($_SESSION['alumno']['nombre']); ?></span>
+                            <span id="nombre"><?php echo htmlspecialchars($_SESSION['profesor']['nombre']); ?></span>
                         </div>
                     </div>
                     <div class="field">
                         <label>Apellido:</label>
                         <div class="field-value">
-                            <span id="apellido"><?php echo htmlspecialchars($_SESSION['alumno']['apellido']); ?></span>
+                            <span id="apellido"><?php echo htmlspecialchars($_SESSION['profesor']['apellido']); ?></span>
                         </div>
                     </div>
                     <div class="field">

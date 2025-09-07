@@ -82,7 +82,7 @@ ob_end_flush();
                     </div>
                     <div class="separador"></div>
                 <div class="contain-inisesion menu-option">
-                    <a class="boton" data-key="opcinisesion" href="../php/sesion/sesion-alumn.php">Cuenta</a>
+                    <a class="boton" data-key="opcinisesion" href="usuario.php">Cuenta</a>
                 </div>
                 <div class="contain-ayuda menu-option">
                     <a class="boton" data-key="opcayuda" href="ayuda.php">Ayuda</a>

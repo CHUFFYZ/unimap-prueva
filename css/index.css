@@ -929,6 +929,7 @@ a.btn, .container3 .fab {
 .leaflet-container {
     width: 100% !important;
     height: 100% !important;
+	/*background: #e9e7e7 !important;*/
 }
 /*fin opciones de leaflet----------------------------------------------------------------------------------------------*/
 /*pantalla de carga inicio---------------------------------------------------------------------------------------------*/
