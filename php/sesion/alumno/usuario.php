@@ -72,7 +72,7 @@ try {
 
 // Manejo de imagen de usuario
 $imageExtension = 'webp';
-$imagePath = "../../../image/usuarios/$matricula/{$matricula}user.$imageExtension";
+$imagePath = "../../../image/usuarios/alumn/$matricula/{$matricula}user.$imageExtension";
 $defaultImage = "../../../image/usuarios/user-unknown/user.webp";
 $displayImage = file_exists($imagePath) ? $imagePath : $defaultImage;
 
@@ -101,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_image'])) {
         error_log("Upload error code: " . $_FILES['user_image']['error']);
     } else {
         // No hay error general, proceder
-        $uploadDir = "../../../image/usuarios/$matricula/";
+        $uploadDir = "../../../image/usuarios/alumn/$matricula/";
         $targetFile = $uploadDir . "{$matricula}user";
 
         // Crear directorio si no existe

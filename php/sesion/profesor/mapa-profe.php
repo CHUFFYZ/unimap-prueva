@@ -62,7 +62,7 @@ ob_end_flush();
         <?php
             $matricula = isset($_SESSION['profesor']['matricula']) ? $_SESSION['profesor']['matricula'] : '';
             $imageExtension = 'webp'; 
-            $imagePath = "../../../image/usuarios/$matricula/{$matricula}user.$imageExtension";
+            $imagePath = "../../../image/usuarios/profe/$matricula/{$matricula}user.$imageExtension";
             $defaultImage = "../../../image/usuarios/user-unknown/user.webp";
             $displayImage = file_exists($imagePath) ? $imagePath : $defaultImage;
             ?>

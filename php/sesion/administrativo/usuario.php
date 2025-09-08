@@ -11,19 +11,19 @@ error_log("Session data on perfil-usuario.php: " . print_r($_SESSION, true));
 error_log("Session ID: " . session_id());
 error_log("Cookie lifetime: " . ini_get('session.cookie_lifetime'));
 
-$allowed = ['profesor'];
+$allowed = ['admin'];
 
-if (!isset($_SESSION['profesor'])) {
-    error_log("Session 'profesor' not set");
+if (!isset($_SESSION['admin'])) {
+    error_log("Session 'admin' not set");
     $error = "Sesión no iniciada.";
-} elseif (!isset($_SESSION['profesor']['tipo']) || !in_array($_SESSION['profesor']['tipo'], $allowed)) {
-    error_log("Invalid or missing 'tipo': " . ($_SESSION['profesor']['tipo'] ?? 'not set'));
-    $error = "Acceso restringido a Docentes.";
-} elseif (!isset($_SESSION['profesor']['nombre']) || !isset($_SESSION['profesor']['apellido'])) {
+} elseif (!isset($_SESSION['admin']['tipo']) || !in_array($_SESSION['admin']['tipo'], $allowed)) {
+    error_log("Invalid or missing 'tipo': " . ($_SESSION['admin']['tipo'] ?? 'not set'));
+    $error = "Acceso restringido a administrativos.";
+} elseif (!isset($_SESSION['admin']['nombre']) || !isset($_SESSION['admin']['apellido'])) {
     error_log("Missing 'nombre' or 'apellido'");
     $error = "Datos de usuario incompletos.";
-} elseif (!isset($_SESSION['profesor']['session_expiry']) || time() > $_SESSION['profesor']['session_expiry']) {
-    error_log("Session expired or 'session_expiry' not set. Current time: " . time() . ", Expiry: " . ($_SESSION['profesor']['session_expiry'] ?? 'not set'));
+} elseif (!isset($_SESSION['admin']['session_expiry']) || time() > $_SESSION['admin']['session_expiry']) {
+    error_log("Session expired or 'session_expiry' not set. Current time: " . time() . ", Expiry: " . ($_SESSION['admin']['session_expiry'] ?? 'not set'));
     $error = "Sesión expirada.";
 }
 
@@ -32,12 +32,12 @@ if (isset($error)) {
     session_destroy();
     header("HTTP/1.1 403 Forbidden");
     echo $error . " Redirigiendo...";
-    header("Refresh: 1; URL=../sesion-profe.php");
+    header("Refresh: 1; URL=../sesion-admin.php");
     exit();
 }
 
 // Obtener datos del usuario desde la sesión y la base de datos
-$matricula = $_SESSION['profesor']['matricula'];
+$matricula = $_SESSION['admin']['matricula'];
 $userData = null;
 $dbError = null;
 
@@ -48,7 +48,7 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // Obtener datos del usuario
-    $stmt = $pdo->prepare("SELECT matricula, nombre, apellido, telefono, email, contrasena FROM profesores WHERE matricula = :matricula");
+    $stmt = $pdo->prepare("SELECT matricula, nombre, apellido, telefono, email, contrasena FROM administrativos WHERE matricula = :matricula");
     $stmt->execute([':matricula' => $matricula]);
     $userData = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -72,7 +72,7 @@ try {
 
 // Manejo de imagen de usuario
 $imageExtension = 'webp';
-$imagePath = "../../../image/usuarios/profe/$matricula/{$matricula}user.$imageExtension";
+$imagePath = "../../../image/usuarios/admin/$matricula/{$matricula}user.$imageExtension";
 $defaultImage = "../../../image/usuarios/user-unknown/user.webp";
 $displayImage = file_exists($imagePath) ? $imagePath : $defaultImage;
 
@@ -101,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_image'])) {
         error_log("Upload error code: " . $_FILES['user_image']['error']);
     } else {
         // No hay error general, proceder
-        $uploadDir = "../../../image/usuarios/profe/$matricula/";
+        $uploadDir = "../../../image/usuarios/admin/$matricula/";
         $targetFile = $uploadDir . "{$matricula}user";
 
         // Crear directorio si no existe
@@ -306,19 +306,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_image'])) {
                     <div class="field">
                         <label>Matrícula:</label>
                         <div class="field-value">
-                            <span id="matricula"><?php echo htmlspecialchars($_SESSION['profesor']['matricula']); ?></span>
+                            <span id="matricula"><?php echo htmlspecialchars($_SESSION['admin']['matricula']); ?></span>
                         </div>
                     </div>
                     <div class="field">
                         <label>Nombre:</label>
                         <div class="field-value">
-                            <span id="nombre"><?php echo htmlspecialchars($_SESSION['profesor']['nombre']); ?></span>
+                            <span id="nombre"><?php echo htmlspecialchars($_SESSION['admin']['nombre']); ?></span>
                         </div>
                     </div>
                     <div class="field">
                         <label>Apellido:</label>
                         <div class="field-value">
-                            <span id="apellido"><?php echo htmlspecialchars($_SESSION['profesor']['apellido']); ?></span>
+                            <span id="apellido"><?php echo htmlspecialchars($_SESSION['admin']['apellido']); ?></span>
                         </div>
                     </div>
                     <div class="field">

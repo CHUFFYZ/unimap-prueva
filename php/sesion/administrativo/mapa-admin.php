@@ -63,7 +63,7 @@ ob_end_flush();
         <?php
             $matricula = isset($_SESSION['admin']['matricula']) ? $_SESSION['admin']['matricula'] : '';
             $imageExtension = 'webp'; 
-            $imagePath = "../../../image/usuarios/$matricula/{$matricula}user.$imageExtension";
+            $imagePath = "../../../image/usuarios/admin/$matricula/{$matricula}user.$imageExtension";
             $defaultImage = "../../../image/usuarios/user-unknown/user.webp";
             $displayImage = file_exists($imagePath) ? $imagePath : $defaultImage;
             ?>
@@ -83,7 +83,7 @@ ob_end_flush();
                     </div>
                     <div class="separador"></div>
                     <div class="contain-inisesion menu-option">
-                        <a class="boton" data-key="opcinisesion" href="../php/sesion/sesion-alumn.php">cuenta</a>
+                        <a class="boton" data-key="opcinisesion" href="usuario.php">cuenta</a>
                     </div>
                     <div class="contain-ayuda menu-option">
                         <a class="boton" data-key="opcayuda" href="ayuda.php">Ayuda</a>
