@@ -47,10 +47,18 @@ try {
     // Insertar datos en la tabla correspondiente al mes seleccionado
     $query = "INSERT INTO $month (DIA, AFI, HRS_TOTALES, HORARIO, LUGAR, TIPO) VALUES (?, ?, ?, ?, ?, ?)";
     $stmt = $pdo->prepare($query);
+    
+    $headerSkipped = false;
+    
     foreach ($data as $row) {
         // Evitar encabezados si están en la primera fila
-        if (strtoupper($row[0]) == 'DIA') {
-            continue;
+        if (!$headerSkipped) {
+            // Verificar si es el encabezado (evitar null)
+            $firstCell = $row[0] ?? '';
+            if (strtoupper((string)$firstCell) === 'DIA') {
+                $headerSkipped = true;
+                continue;
+            }
         }
 
         // Validar datos antes de la inserción
@@ -63,7 +71,12 @@ try {
 
         // Evitar inserciones de filas vacías
         if ($dia && $afi && $hrs_totales && $horario && $lugar && $tipo) {
-            $stmt->execute([$dia, $afi, $hrs_totales, $horario, $lugar, $tipo]);
+            try {
+                $stmt->execute([$dia, $afi, $hrs_totales, $horario, $lugar, $tipo]);
+            } catch (PDOException $e) {
+                // Opcional: registrar el error pero continuar con las demás filas
+                error_log("Error insertando fila: " . $e->getMessage());
+            }
         }
     }
 
