@@ -29,8 +29,11 @@ try {
     $pdo->beginTransaction();
 
     $matricula = filter_var($alumno['matricula'], FILTER_VALIDATE_INT);
-    $nombre = filter_var($alumno['nombre'], FILTER_SANITIZE_STRING);
-    $apellido = filter_var($alumno['apellido'], FILTER_SANITIZE_STRING);
+    
+    // Reemplazar FILTER_SANITIZE_STRING (obsoleto) con alternativas modernas
+    $nombre = !empty($alumno['nombre']) ? htmlspecialchars($alumno['nombre'], ENT_QUOTES, 'UTF-8') : null;
+    $apellido = !empty($alumno['apellido']) ? htmlspecialchars($alumno['apellido'], ENT_QUOTES, 'UTF-8') : null;
+    
     $contrasena = $alumno['contrasena'];
     $telefono = filter_var($alumno['telefono'], FILTER_VALIDATE_INT);
     $email = filter_var($alumno['email'], FILTER_SANITIZE_EMAIL);
@@ -95,18 +98,38 @@ try {
 
     // Success
     $_SESSION['success'] = "Alumno modificado exitosamente";
-    header("Location: ../../../sesion/administrativo/mod-elim-alumn.php");
-    exit();
+    
+    // Redirección segura
+    if (!headers_sent()) {
+        header("Location: ../../../sesion/administrativo/mod-elim-alumn.php");
+        exit();
+    } else {
+        echo "<script>window.location.href = '../../../sesion/administrativo/mod-elim-alumn.php';</script>";
+        exit();
+    }
 
 } catch (PDOException $e) {
     $pdo->rollBack();
     error_log("Error BD: " . $e->getMessage());
     $_SESSION['error'] = "Error técnico. Contacta al administrador.";
-    header("Location: ../../../sesion/administrativo/mod-elim-alumn.php");
-    exit();
+    
+    if (!headers_sent()) {
+        header("Location: ../../../sesion/administrativo/mod-elim-alumn.php");
+        exit();
+    } else {
+        echo "<script>window.location.href = '../../../sesion/administrativo/mod-elim-alumn.php';</script>";
+        exit();
+    }
+    
 } catch (Exception $e) {
     error_log("Error Modificación: " . $e->getMessage());
     $_SESSION['error'] = $e->getMessage();
-    header("Location: ../../../sesion/administrativo/mod-elim-alumn.php");
-    exit();
+    
+    if (!headers_sent()) {
+        header("Location: ../../../sesion/administrativo/mod-elim-alumn.php");
+        exit();
+    } else {
+        echo "<script>window.location.href = '../../../sesion/administrativo/mod-elim-alumn.php';</script>";
+        exit();
+    }
 }
