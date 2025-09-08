@@ -24,8 +24,10 @@ try {
     $password = $_POST['password'];
     $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
     $telefono = !empty($_POST['telefono']) ? filter_var($_POST['telefono'], FILTER_VALIDATE_INT) : null;
-    $nombre = !empty($_POST['nombre']) ? filter_var($_POST['nombre'], FILTER_SANITIZE_STRING) : null;
-    $apellido = !empty($_POST['apellido']) ? filter_var($_POST['apellido'], FILTER_SANITIZE_STRING) : null;
+    
+    // Reemplazar FILTER_SANITIZE_STRING (obsoleto) con alternativas modernas
+    $nombre = !empty($_POST['nombre']) ? htmlspecialchars($_POST['nombre'], ENT_QUOTES, 'UTF-8') : null;
+    $apellido = !empty($_POST['apellido']) ? htmlspecialchars($_POST['apellido'], ENT_QUOTES, 'UTF-8') : null;
 
     if (!$matricula || $matricula < 1) {
         throw new Exception("Matrícula inválida");
@@ -92,17 +94,37 @@ try {
 
     // Success
     $_SESSION['success'] = "Administrativo registrado exitosamente";
-    header("Location: ../../../sesion/administrativo/alta-admin.php");
-    exit();
+    
+    // Redirección segura
+    if (!headers_sent()) {
+        header("Location: ../../../sesion/administrativo/alta-admin.php");
+        exit();
+    } else {
+        echo "<script>window.location.href = '../../../sesion/administrativo/alta-admin.php';</script>";
+        exit();
+    }
 
 } catch (PDOException $e) {
     error_log("Error BD: " . $e->getMessage());
     $_SESSION['error'] = "Error técnico. Contacta al administrador.";
-    header("Location: ../../../sesion/administrativo/alta-admin.php");
-    exit();
+    
+    if (!headers_sent()) {
+        header("Location: ../../../sesion/administrativo/alta-admin.php");
+        exit();
+    } else {
+        echo "<script>window.location.href = '../../../sesion/administrativo/alta-admin.php';</script>";
+        exit();
+    }
+    
 } catch (Exception $e) {
     error_log("Error Registro: " . $e->getMessage());
     $_SESSION['error'] = $e->getMessage();
-    header("Location: ../../../sesion/administrativo/alta-admin.php");
-    exit();
+    
+    if (!headers_sent()) {
+        header("Location: ../../../sesion/administrativo/alta-admin.php");
+        exit();
+    } else {
+        echo "<script>window.location.href = '../../../sesion/administrativo/alta-admin.php';</script>";
+        exit();
+    }
 }
