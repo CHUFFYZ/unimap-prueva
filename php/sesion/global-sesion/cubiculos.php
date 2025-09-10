@@ -127,7 +127,7 @@ ob_end_flush();
                 { nombre: "Lic. Karla Georgina Zepeda Soberanis", edificio: "CTI", piso: "2",cubiculo: 206, horario:"7:00am-3:00pm", rol: "Profesor", imagen: "../../../image/docentes/profesor.png"  },
                 { nombre: "Dr. Jose Felipe Cocon Suarez", edificio: "CTI", piso: "3", cubiculo: 312, horario:"7:00am-3:00pm", rol: "Profesor", imagen: "../../../image/docentes/profesor.png"  },
                 { nombre: "Dr. Jose Gabriel Reding Dominguez", edificio: "CTI", piso: "3",cubiculo: 310, horario:"7:00am-3:00pm", rol: "Profesor", imagen: "../../../image/docentes/profesor.png"  },
-            /*direccion */    { nombre: "Ing. Saide Dariola Duran Matin", edificio: "CTI", piso: "1",cubiculo: 1, horario:"7:00am-5:00pm", rol: "Secretaria Academica", imagen: "../../../image/docentes/profesor.png"  },
+            /*direccion */    { nombre: "Ing. Saide Dariola Duran Matin", edificio: "CTI", piso: "1",cubiculo: 1, horario:"9:00am-5:00pm", rol: "Secretaria Academica", imagen: "../../../image/docentes/profesor.png"  },
                 { nombre: "Lic. Cesar Octavio Guerra Guerrero", edificio: "CTI", piso: "2", cubiculo: 207, horario:"7:00am-3:00pm", rol: "Profesor", imagen: "../../../image/docentes/profesor.png"  },
               /*sin identificar */  { nombre: "Lic. Nelly Isbael Angel Hernandez", edificio: "CTI", piso: "1",cubiculo: 1, horario:"7:00am-3:00pm", rol: "Profesor", imagen: "../../../image/docentes/profesor.png"  },
                 { nombre: "Ing. Reyna Luz Torres Ortiz", edificio: "CTI", piso: "1", cubiculo: 116, horario:"7:00am-3:00pm", rol: "Profesor", imagen: "../../../image/docentes/profesor.png"  },
