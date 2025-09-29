@@ -1,3 +1,42 @@
+<?php
+session_start();
+
+// Si existe alguna sesión activa, intentar redirigir
+if (!empty($_SESSION)) {
+    // 1. Verificar sesión de Alumno
+    if (isset($_SESSION['alumno']) && $_SESSION['alumno']['tipo'] === 'alumno') {
+        // Redirigir a la página del alumno
+        header("Location: php/sesion/alumno/mapa-alumn.php");
+        exit();
+    }
+
+    // 2. Verificar sesión de Profesor (Profe)
+    if (isset($_SESSION['profesor']) && $_SESSION['profesor']['tipo'] === 'profesor') {
+        // Redirigir a la página del profesor
+        header("Location: php/sesion/profesor/mapa-profe.php");
+        exit();
+    }
+
+    // 3. Verificar sesión de Administrador (Admin)
+    if (isset($_SESSION['admin']) && $_SESSION['admin']['tipo'] === 'admin') {
+        // Redirigir a la página del administrador
+        header("Location: php/sesion/administrativo/mapa-admin.php");
+        exit();
+    }
+
+    // Opcional: Si hay sesión pero no es de un tipo conocido, podríamos limpiarla.
+    // session_unset();
+    // session_destroy();
+    
+    // Si la sesión existe pero no cumple con los criterios anteriores,
+    // el usuario se queda en index.php.
+}
+
+// Si no hay sesión o la sesión no coincide con ningún tipo,
+// el flujo normal del index.php (contenido, enlaces de login, etc.) continúa.
+
+// ... el resto del código HTML/PHP del index.php
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>

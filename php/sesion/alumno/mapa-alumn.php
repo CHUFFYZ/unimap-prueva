@@ -92,7 +92,7 @@ ob_end_flush();
                     <a class="boton" data-key="opcregist" href="../../back-end/global-back-end/cerrar-sesion.php">Cerrar Sesión</a>
                 </div>
             </div>
-            <!-- 
+<!-- -->
                 <div class="idioma">
                     <div class="language-switcher">
                         <select id="languageSelector">
@@ -101,7 +101,7 @@ ob_end_flush();
                             <option value="fr">Français</option>
                         </select>
                     </div>
-                </div> -->
+                </div> 
         </div>
         <div class="unimap">
             <div class="containerlogo">
@@ -137,25 +137,35 @@ ob_end_flush();
         <div id="map"></div>
         <div id="osm-map"></div>
     </div>
-    <div class="palpitante"></div>
+    <!--<div class="palpitante"></div>-->
     <div class="palpitante2">
-        <h2><-- ¡Consulta Edificios Aquí!</h2>
-    </div>
+            <h2><-- ¡Consulta Edificios Aquí!</h2>
+        </div>
     <div id="guia-container">
         <div class="palpitante3">
             <i class="fa-solid fa-magnifying-glass" aria-label="Abrir panel de ubicaciones"></i>
         </div>
         <div id="location-controls"></div>
         <div id="location-details"></div>
-        <div id="fullscreen-image">
+    </div>
+    <div class="palpitante4">
+            <h2><-- ¡Consulta lugares Aquí!</h2>
+        </div>
+    <div id="guia-container2">
+        <div class="palpitante5">
+            <i class="fa-solid fa-magnifying-glass" aria-label="Abrir panel de ubicaciones"></i>
+        </div>
+        <div id="location-controls2"></div>
+        <div id="location-details2"></div>
+    </div>
+    <div id="fullscreen-image">
             <span class="fullscreen-close-btn">×</span>
             <img src="" alt="Imagen en pantalla completa">
             <video src="" alt="" style="display: none;"></video>
-        </div>
-        <div id="panorama-viewer" class="panorama-container">
+    </div>
+    <div id="panorama-viewer" class="panorama-container">
             <div id="panorama"></div>
             <span class="panorama-close-btn">×</span>
-        </div>
     </div>
     <div id="popup-overlay" class="popup-overlay"></div>
     <div id="popup" class="popup">
@@ -191,11 +201,12 @@ ob_end_flush();
     </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.pannellum.org/2.5/pannellum.js"></script>
+    <script src="../../../js/locations.js"></script>
     <script src="../../../js/zoom2.js"></script>
     <script src="../../../js/global.js"></script>
     <script src="../../../js/menu.js"></script>
     <script src="../../../js/menu-usuario.js"></script>
-    <script src="../../../js/lenguaje.js"></script>
+    <script src="https://unimap-50ch.onrender.com/js/lenguaje.js"></script>
     <script src="../../../js/mostrar-afi.js"></script>
 </body>
 </html>

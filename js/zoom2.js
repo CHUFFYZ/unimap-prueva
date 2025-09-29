@@ -2,250 +2,24 @@ let map; // Mapa SVG con L.CRS.Simple
 let osmMap; // Mapa de OpenStreetMap con L.CRS.EPSG3857
 let osmLayer;
 let baseLayers = {}, intermediateBaseLayers = {}, detailedBaseLayers = {}, detailedLayers = {}, markersLayers = {};
-let markers = { 'Campus Principal': {}, 'Campus 2': {}, 'Campus 3': {} };
-let interestMarkers = { 'Campus Principal': [], 'Campus 2': [], 'Campus 3': [] };
+let markers = { 'Campus Principal': {}, 'Campus 2': {}, 'Campus 3': {}, 'Jardin Botanico': {}, 'Centro Cultural Universitario': {}, 'Museo Guanal': {}, 'Campus Sabancuy': {}};
+let interestMarkers = { 'Campus Principal': [], 'Campus 2': [], 'Campus 3': [], 'Jardin Botanico': [], 'Centro Cultural Universitario': [], 'Museo Guanal': [], 'Campus Sabancuy': [] };
 let isFlying = false;
-let interestPointsActive = { 'Campus Principal': false, 'Campus 2': false, 'Campus 3': false };
+let interestPointsActive = { 'Campus Principal': false, 'Campus 2': false, 'Campus 3': false, 'Jardin Botanico': false, 'Centro Cultural Universitario': false, 'Museo Guanal': false, 'Campus Sabancuy': false };
 let geolocationActive = false;
 let currentPinMarker = null;
 let userMarker = null;
+let accuracyCircle = null;
+let routeLayer = null;
+let currentDestination = null;
+let firstGeoUpdate = false;
 let currentCampus = 'Campus Principal'; // Campus por defecto
 let ignoreNextZoomEnd = false; // Flag para ignorar el zoomend inicial en OSM
 
 // Almacenar referencias a los event listeners activos
 let fullscreenCloseListener = null;
 let panoramaCloseListener = null;
-
-// Configuración de campus con coordenadas y zoom inicial personalizables
-const campuses = {
-    'Campus Principal': { 
-        w: 2049, 
-        h: 1521, 
-        svg: '../../../image/mapa/campus1.svg', 
-        geojson: '../../../data/university_buildings.json', 
-        center: [700, 1200], // [lat, lng]
-        zoom: 0 // Zoom inicial
-    },
-    'Campus 2': { 
-        w: 2049, 
-        h: 1521, 
-        svg: '../../../image/mapa/campus2.svg', 
-        geojson: '../../../data/campus2_buildings.json', 
-        center: [700, 1200], // [lat, lng]
-        zoom: 0 // Zoom inicial
-    },
-    'Campus 3': { 
-        w: 2049, 
-        h: 1521, 
-        svg: '../../../image/mapa/campus3.svg', 
-        geojson: '../../../data/campus3_buildings.json', 
-        center: [700, 1200], // [lat, lng]
-        zoom: 0 // Zoom inicial
-    }
-};
-
-// Lista de ubicaciones por campus
-const locations = {
-    'Campus Principal': {
-        'Facultad de Ciencias de la Información': {
-            places: [{
-                name: 'C-1',
-                coords: [475, 1585],
-                icon: { iconUrl: '../../../image/pines/pin-fci-c1.svg', color: 'azul-claro' },
-                photos: [
-                    { url: '../../../image/galeria/c-1/pb.jpg', isPanoramic: false },
-                    { url: '../../../image/galeria/c-1/p2.jpg', isPanoramic: false },
-                    { url: '../../../image/galeria/c-1/p3.jpg', isPanoramic: false },
-                    { url: '../../../image/galeria/c-1/p4.jpg', isPanoramic: false },
-                    { url: '../../../image/galeria/c-1/EDIFICIO.webp', isPanoramic: false },
-                    { url: '../../../image/galeria/c-1/EDIFICIO1.webp', isPanoramic: false }
-                ],
-                comments: 'Este edificio es la planta principal de la Facultad de Ciencias de la Información, fundada en 1980. Es conocido por su biblioteca especializada y laboratorios de computación.'
-            }],
-            icon: { iconUrl: '../../../image/pines/pin-fci.svg', color: 'azul-claro' },
-            usarIconoGrupal: false
-        },
-        'Centro de Idiomas': {
-            places: [{
-                name: 'C',
-                coords: [700, 1595],
-                icon: { iconUrl: '../../../image/pines/pin-ci.svg', color: 'amarillo' },
-                photos: [
-                    { url: '../../../image/galeria/ci/2.webp', isPanoramic: false }
-                ],
-                comments: [
-                    'El Centro de Idiomas de la UNACAR ofrece programas de enseñanza de inglés y francés, tanto para estudiantes universitarios como para el público en general. Su objetivo es fortalecer las competencias lingüísticas de los alumnos.',
-                    'Oferta educativa:',
-                    '*Inglés: 4 niveles para licenciatura.',
-                    '*Francés: Cursos optativos y especializados para propósitos académicos.',
-                    '*Cursos no escolarizados: Programas abiertos para niños, jóvenes y adultos.'
-                ]
-            }],
-            icon: { iconUrl: '../../../image/pines/pin-ci.svg', color: 'amarillo' },
-            usarIconoGrupal: false
-        },
-        'Edificio de Vinculación': {
-            places: [{
-                name: 'CH',
-                coords: [310, 1431],
-                icon: { iconUrl: '../../../image/pines/pin-ev-ch.svg', color: 'verde-azul' },
-                comments: ['Edificio de la facultad de Vinculación']
-            }],
-            icon: { iconUrl: '../../../image/pines/pin-ev.svg', color: 'verde-azul' },
-            usarIconoGrupal: false
-        },
-        'Facultad de Química': {
-            places: [
-                { name: 'T', coords: [791, 1270], icon: { iconUrl: '../../../image/pines/pin-fq-t.svg', color: 'cafe' }, comments: ['Edificio de la facultad de Química'] },
-                { name: 'U', coords: [892, 1285], icon: { iconUrl: '../../../image/pines/pin-fq-u.svg', color: 'cafe' }, comments: ['Edificio de la facultad de Química'] },
-                { name: 'U-1', coords: [915, 1225], icon: { iconUrl: '../../../image/pines/pin-fq-u1.svg', color: 'cafe' }, comments: ['Edificio de la facultad de Química'] },
-                { name: 'V', coords: [878, 1330], icon: { iconUrl: '../../../image/pines/pin-fq-v.svg', color: 'cafe' }, comments: ['Edificio de la facultad de Química'] }
-            ],
-            icon: { iconUrl: '../../../image/pines/pin-fq.svg', color: 'cafe' },
-            usarIconoGrupal: false
-        },
-        'Gimnasio Universitario y PE de LEFYD': {
-            places: [{
-                name: 'E',
-                coords: [870, 783],
-                icon: { iconUrl: '../../../image/pines/pin-gu.svg', color: 'naranja' },
-                photos: [{ url: '../../../image/galeria/E/1.jpg', isPanoramic: true }],
-                comments: ['Gimnasio Universitario de la UNACAR']
-            }],
-            icon: { iconUrl: '../../../image/pines/pin-gu.svg', color: 'naranja' },
-            usarIconoGrupal: false
-        },
-        'Facultad de Derecho': {
-            places: [{
-                name: 'Z',
-                coords: [890, 1500],
-                icon: { iconUrl: '../../../image/pines/pin-fd-z.svg', color: 'durazno' },
-                comments: ['Edificio de la facultad de Derecho']
-            }],
-            icon: { iconUrl: '../../../image/pines/pin-fd.svg', color: 'durazno' },
-            usarIconoGrupal: false
-        },
-        'Facultad de Ciencias Educativas': {
-            places: [
-                { name: 'H', coords: [531, 1208], icon: { iconUrl: '../../../image/pines/pin-fce-h.svg', color: 'rosa-claro' }, comments: ['Edificio de la facultad de Ciencias Educativas'] },
-                { name: 'I', coords: [550, 1173], icon: { iconUrl: '../../../image/pines/pin-fce-i.svg', color: 'rosa-claro' }, comments: ['Edificio de la facultad de Ciencias Educativas'] },
-                { name: 'K', coords: [636, 1131], icon: { iconUrl: '../../../image/pines/pin-fce-k.svg', color: 'rosa-claro' }, comments: ['Edificio de la facultad de Ciencias Educativas'] },
-                { name: 'O', coords: [705, 1092], icon: { iconUrl: '../../../image/pines/pin-fce-o.svg', color: 'rosa-claro' }, comments: ['Edificio de la facultad de Ciencias Educativas'] },
-                { name: 'Q', coords: [660, 1216], icon: { iconUrl: '../../../image/pines/pin-fce-q.svg', color: 'rosa-claro' }, comments: ['Edificio de la facultad de Ciencias Educativas'] }
-            ],
-            icon: { iconUrl: '../../../image/pines/pin-fce.svg', color: 'rosa-claro' },
-            usarIconoGrupal: false
-        },
-        'Áreas de Servicios': {
-            places: [
-                { name: 'A_Rectoría', coords: [556, 575], icon: { iconUrl: '../../../image/pines/pin-rectoria-a.svg', color: 'rojo' }, comments: ['Edificio de Servicios A'] },
-                { name: 'W_Centro de Educación Continua', coords: [894, 1371], icon: { iconUrl: '../../../image/pines/pin-cec-w.svg', color: 'morado' }, comments: ['Edificio de Servicios W'] },
-                { name: 'F-1_Edificio Cafetería, Extensión Universitaria', coords: [629, 1349], icon: { iconUrl: '../../../image/pines/pin-ec-f1.svg', color: 'rosa-oscuro' }, comments: ['Edificio de Servicios F-1'] },
-                { name: 'J_Coord. General de Obras y Baby Delfín', coords: [510, 1068], icon: { iconUrl: '../../../image/pines/pin-bd-j.svg', color: 'crema' }, comments: ['Edificio de Servicios J'] },
-                { name: 'B_Biblioteca Universitaria', coords: [595, 1622], icon: { iconUrl: '../../../image/pines/pin-biblioteca.svg', color: 'verde-oscuro' }, comments: ['Edificio de Servicios B'] },
-                { name: 'D_Aula Magna', coords: [810, 1415], icon: { iconUrl: '../../../image/pines/pin-am-d.svg', color: 'verde-claro' }, comments: ['Edificio de Servicios D'] },
-                { name: 'M_Soporte Técnico', coords: [602, 1022], icon: { iconUrl: '../../../image/pines/pin-st-m.svg', color: 'azul-intenso' }, comments: ['Edificio de Servicios M'] },
-                { name: 'N_Redes y Patrimonio Universitario', coords: [520, 1004], icon: { iconUrl: '../../../image/pines/pin-rpu-n.svg', color: 'azul-oscuro' }, comments: ['Edificio de Servicios N'] },
-                { name: 'P_Sala Audiovisual', coords: [705, 1184], icon: { iconUrl: '../../../image/pines/pin-sa-p.svg', color: 'azul-oscuro' }, comments: ['Edificio de Servicios P'] },
-                { name: 'G_Servicios Culturales', coords: [495, 1275], icon: { iconUrl: '../../../image/pines/pin-sc-g.svg', color: 'azul-oscuro' }, comments: ['Edificio de Servicios G'] },
-                { name: 'L', coords: [590, 1086], icon: { iconUrl: '../../../image/pines/pin-fcea-l.svg', color: 'azul-oscuro' }, comments: ['Edificio de Servicios L'] },
-                { name: 'Ñ_Sala de Usos Múltiples, Fotocopiado', coords: [635, 1048], icon: { iconUrl: '../../../image/pines/pin-sum-ñ.svg', color: 'azul-oscuro' }, comments: ['Edificio de Servicios Ñ'] },
-                { name: 'LL_Almacenes y Talleres', coords: [710, 985], icon: { iconUrl: '../../../image/pines/pin-at-ll.svg', color: 'azul-oscuro' }, comments: ['Edificio de Servicios LL'] },
-                { name: 'ZB_Sutucar', coords: [750, 485], icon: { iconUrl: '../../../image/pines/pin-s-zb.svg', color: 'azul-oscuro' }, comments: ['Edificio de Servicios ZB'] },
-                { name: 'ZE_Secretaría Académica', coords: [721, 468], icon: { iconUrl: '../../../image/pines/pin-sa-ze.svg', color: 'azul-oscuro' }, comments: ['Edificio de Servicios ZE'] },
-                { name: 'Residencia Universitaria', coords: [1028, 666], icon: { iconUrl: '../../../image/pines/pin-RU.svg', color: 'azul-oscuro' }, comments: ['Edificio de Servicios Residencia Universitaria'] },
-                { name: 'Z-1', coords: [650, 1667], icon: { iconUrl: '../../../image/pines/pin-Z1.svg', color: 'azul-oscuro' }, comments: ['Edificio de Servicios Z-1'] },
-                { name: 'J-1', coords: [490, 1125], icon: { iconUrl: '../../../image/pines/pin-j1.svg', color: 'azul-oscuro' }, comments: ['Edificio de Servicios J-1'] }
-            ],
-            icon: { iconUrl: '../../../image/pines/pin-sa.svg', color: 'azul-oscuro' },
-            usarIconoGrupal: false
-        },
-        'Facultad de Ciencias Económicas Administrativas': {
-            places: [
-                { name: 'R', coords: [650, 1273], icon: { iconUrl: '../../../image/pines/pin-fcea-r.svg', color: 'azul' }, comments: ['Edificio de la Ciencias Económicas Administrativas'] },
-                { name: 'S', coords: [760, 1333], icon: { iconUrl: '../../../image/pines/pin-fcea-s.svg', color: 'azul' }, comments: ['Edificio de la facultad de Ciencias Económicas Administrativas'] },
-                { name: 'X', coords: [910, 1414], icon: { iconUrl: '../../../image/pines/pin-fcea-x.svg', color: 'azul' }, comments: ['Edificio de la facultad de Ciencias Económicas Administrativas'] },
-                { name: 'Y', coords: [892, 1451], icon: { iconUrl: '../../../image/pines/pin-fcea-y.svg', color: 'azul' }, comments: ['Edificio de la facultad de Ciencias Económicas Administrativas'] }
-            ],
-            icon: { iconUrl: '../../../image/pines/pin-fcea.svg', color: 'azul' },
-            usarIconoGrupal: false
-        }
-    }
-};
-
-const interestPoints = {
-    'Campus Principal': [
-        {
-            name: 'Cancha Unacar',
-            building: 'Área Común',
-            coords: [861, 995],
-            photos: [{ url: '../../../image/galeria/areas-interes/CU/1.jpg', isPanoramic: true }],
-            comments: 'Área ideal para deportes, como fútbol, voleibol.'
-        },
-        {
-            name: 'Cancha Básquet',
-            building: 'Área Común',
-            coords: [894, 817],
-            photos: [
-                { url: '../../../image/galeria/areas-interes/CB/1.jpg', isPanoramic: true },
-                { url: '../../../image/galeria/areas-interes/CB/videocanchabasquet.gif', isPanoramic: false }
-            ],
-            comments: 'Área ideal para deportes, como fútbol, voleibol.'
-        },
-        {
-            name: 'Cancha Béisbol',
-            building: 'Área Común',
-            coords: [660, 683],
-            photos: [{ url: '../../../image/galeria/areas-interes/b/2.jpg', isPanoramic: false }],
-            comments: 'La cancha de béisbol de la UNACAR forma parte de la Unidad Deportiva Universitaria, donde se realizan entrenamientos y torneos estudiantiles.'
-        },
-        {
-            name: 'Glorieta el Camarón',
-            building: 'Monumento',
-            coords: [414, 1370],
-            photos: [
-                { url: '../../../image/galeria/areas-interes/GC/camaron.webp', isPanoramic: false },
-                { url: '../../../image/galeria/areas-interes/GC/nightcamaron.webp', isPanoramic: false },
-                { url: '../../../image/galeria/areas-interes/GC/camaronarriba.webp', isPanoramic: false }
-            ],
-            comments: [
-                'Historia de la Glorieta del Camarón en Ciudad del Carmen #Campeche.',
-                'El monumento es un homenaje a la Industria Camaronera... (texto completo)'
-            ]
-        },
-        {
-            name: 'Área de Descanso FCI',
-            building: 'Área Común',
-            coords: [475, 1507],
-            photos: [{ url: '../../../image/galeria/areas-interes/ADF/1.jpg', isPanoramic: true }],
-            comments: 'Jardín con áreas verdes para relajarse entre clases.'
-        },
-        {
-            name: 'Explanada',
-            building: 'Área Común',
-            coords: [640, 1305],
-            photos: [{ url: '../../../image/galeria/areas-interes/E/1.jpg', isPanoramic: true }],
-            comments: 'Este es un espacio amplio y abierto dentro de la universidad, utilizado para eventos institucionales, actividades culturales y reuniones estudiantiles...'
-        },
-        {
-            name: 'Monumento',
-            building: 'Área Común',
-            coords: [710, 1403],
-            photos: [{ url: '../../../image/galeria/areas-interes/M/1.jpg', isPanoramic: true }],
-            comments: [
-                'El Monumento a Justo Sierra Méndez es un homenaje al ilustre educador, escritor e historiador campechano...',
-                'Cada año, en la UNACAR se conmemora el natalicio de Justo Sierra...'
-            ]
-        },
-        {
-            name: 'Monumento FCI',
-            building: 'Área Común',
-            coords: [590, 1545],
-            photos: [{ url: '../../../image/galeria/areas-interes/MF/2.jpg', isPanoramic: false }],
-            comments: 'Área ideal para deportes, como fútbol, voleibol.'
-        }
-    ]
-};
+let geolocationWatchId = null; // Para limpiar el watchPosition
 
 function preloadImages(imageUrls) {
     imageUrls.forEach(url => {
@@ -268,13 +42,21 @@ function switchToCampus(campus) {
     if (interestPointsActive[campus]) {
         updateInterestPoints(campus);
     }
-    // Ocultar el mapa de OpenStreetMap
+    // Mostrar panel de búsqueda SVG y ocultar el de OSM
+    const guiaContainer = document.getElementById('guia-container');
+    const guiaContainer2 = document.getElementById('guia-container2');
     const osmMapElement = document.getElementById('osm-map');
     const mapElement = document.getElementById('map');
     if (osmMapElement && mapElement) {
         osmMapElement.style.display = 'none';
         mapElement.style.display = 'block';
     }
+    if (guiaContainer && guiaContainer2) {
+        guiaContainer.style.display = 'block';
+        guiaContainer2.style.display = 'none';
+    }
+    // Actualizar el panel de ubicaciones para mostrar solo el currentCampus
+    updateLocationControls();
 }
 
 function flyToLocation(lat, lng, building, placeName, campus, isInterestPoint = false) {
@@ -297,7 +79,7 @@ function flyToLocation(lat, lng, building, placeName, campus, isInterestPoint = 
         currentPinMarker = null;
     }
 
-    map.flyTo([lat, lng], 1, {
+    map.flyTo([lat, lng], 1,{
         duration: 1.5,
         noMoveStart: true
     });
@@ -331,7 +113,7 @@ function flyToLocation(lat, lng, building, placeName, campus, isInterestPoint = 
             if (pinMarker) {
                 currentPinMarker = pinMarker;
                 pinMarker.openPopup();
-                pinMarker._icon.classList.add('marker-animated');
+                if (pinMarker._icon) pinMarker._icon.classList.add('marker-animated');
             }
         } else {
             const markerGroup = markers[campus][building];
@@ -353,9 +135,10 @@ function flyToLocation(lat, lng, building, placeName, campus, isInterestPoint = 
             }
 
             let markerAttempts = 0;
-            const maxMarkerAttempts = 5;
+            const maxMarkerAttempts = 10;
             const animateMarkerAndPopup = () => {
                 if (targetMarker._icon) {
+                    console.log('Animando marcador y popup para', placeName);
                     targetMarker._icon.classList.add('marker-animated');
 
                     targetMarker.once('popupopen', () => {
@@ -379,7 +162,10 @@ function flyToLocation(lat, lng, building, placeName, campus, isInterestPoint = 
                     }, 500);
                 } else if (markerAttempts < maxMarkerAttempts) {
                     markerAttempts++;
-                    setTimeout(animateMarkerAndPopup, 200);
+                    console.log('Reintentando animación de marcador, intento', markerAttempts);
+                    setTimeout(animateMarkerAndPopup, 300);
+                } else {
+                    console.log('Máximo de intentos alcanzado, no se pudo animar el marcador para', placeName);
                 }
             };
 
@@ -488,7 +274,6 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
         });
     });
 
-    // Configurar cierre de panorama
     let panoramaCloseBtn = document.querySelector('.panorama-close-btn');
     if (!panoramaCloseBtn) {
         console.log('Panorama close button not found, creating one');
@@ -524,7 +309,6 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
     console.log('Adding panorama close button listener');
     panoramaCloseBtn.addEventListener('click', panoramaCloseListener);
 
-    // Configurar cierre de fullscreen
     let fullscreenCloseBtn = document.querySelector('.fullscreen-close-btn');
     if (!fullscreenCloseBtn) {
         console.log('Fullscreen close button not found, creating one');
@@ -653,30 +437,149 @@ function toggleGeolocation() {
     const geolocationButton = document.querySelector('.leaflet-control-geolocation');
     if (!geolocationActive) {
         geolocationActive = true;
+        firstGeoUpdate = true;
         geolocationButton.classList.add('active');
-        geolocationButton.style.backgroundColor = '#1E90FF'; // Azul al activar
-        // Simulación de geolocalización en coordenadas de píxeles
-        const simulatedLatLng = [700, 1200]; // Centro del mapa SVG de Campus Principal
-        if (userMarker) {
-            map.removeLayer(userMarker);
+        geolocationButton.style.backgroundColor = '#1E90FF';
+        if ("geolocation" in navigator) {
+            geolocationWatchId = navigator.geolocation.watchPosition((position) => {
+                const { latitude, longitude, accuracy } = position.coords;
+                if (!userMarker) {
+                    userMarker = L.circleMarker([latitude, longitude], {
+                        radius: 6,
+                        fillColor: "#3388ff",
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 1
+                    }).addTo(osmMap);
+                } else {
+                    userMarker.setLatLng([latitude, longitude]);
+                }
+                if (!accuracyCircle) {
+                    accuracyCircle = L.circle([latitude, longitude], {
+                        radius: accuracy,
+                        color: "#3388ff",
+                        fillColor: "#3388ff",
+                        fillOpacity: 0.2,
+                        weight: 1
+                    }).addTo(osmMap);
+                } else {
+                    accuracyCircle.setLatLng([latitude, longitude]);
+                    accuracyCircle.setRadius(accuracy);
+                }
+                if (firstGeoUpdate) {
+                    osmMap.flyTo([latitude, longitude], 18, {
+                        duration: 1.5,
+                        noMoveStart: true
+                    });
+                    firstGeoUpdate = false;
+                }
+                if (currentDestination) {
+                    const url = `https://router.project-osrm.org/route/v1/driving/${longitude},${latitude};${currentDestination.lng},${currentDestination.lat}?overview=full&geometries=geojson`;
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (routeLayer) osmMap.removeLayer(routeLayer);
+                            if (data.routes && data.routes.length > 0) {
+                                const geometry = data.routes[0].geometry;
+                                routeLayer = L.geoJSON(geometry, {
+                                    style: { color: '#3880ff', weight: 5, opacity: 0.7 }
+                                }).addTo(osmMap);
+                            }
+                        })
+                        .catch(error => console.error('Error fetching route:', error));
+                }
+            }, (error) => {
+                console.error('Error en geolocalización:', error);
+                alert('No se pudo obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.');
+                toggleGeolocation();
+            }, { enableHighAccuracy: true });
+        } else {
+            alert('Geolocalización no soportada en este navegador.');
+            toggleGeolocation();
         }
-        userMarker = L.marker(simulatedLatLng, {
-            icon: L.divIcon({
-                className: 'user-marker',
-                html: '<div style="width: 20px; height: 20px; border-radius: 50%; background: #ff0000; border: 2px solid #fff;"></div>',
-                iconSize: [20, 20]
-            })
-        }).addTo(map);
-        flyToLocation(simulatedLatLng[0], simulatedLatLng[1], 'Ubicación Actual', 'Usuario', 'Campus Principal', true);
     } else {
         geolocationActive = false;
         geolocationButton.classList.remove('active');
-        geolocationButton.style.backgroundColor = ''; // Restaurar estilo
+        geolocationButton.style.backgroundColor = '';
+        if (geolocationWatchId) {
+            navigator.geolocation.clearWatch(geolocationWatchId);
+            geolocationWatchId = null;
+        }
         if (userMarker) {
-            map.removeLayer(userMarker);
+            osmMap.removeLayer(userMarker);
             userMarker = null;
         }
+        if (accuracyCircle) {
+            osmMap.removeLayer(accuracyCircle);
+            accuracyCircle = null;
+        }
+        if (routeLayer) {
+            osmMap.removeLayer(routeLayer);
+            routeLayer = null;
+        }
+        currentDestination = null;
     }
+}
+
+function flyToOSMLocation(lat, lng, campus) {
+    if (!osmMap) {
+        console.log('flyToOSMLocation: OSM Map not initialized');
+        return;
+    }
+
+    if (routeLayer) {
+        osmMap.removeLayer(routeLayer);
+        routeLayer = null;
+    }
+
+    if (geolocationActive && userMarker) {
+        currentDestination = { lat: lat, lng: lng, campus: campus };
+        const currentPos = userMarker.getLatLng();
+        const url = `https://router.project-osrm.org/route/v1/driving/${currentPos.lng},${currentPos.lat};${lng},${lat}?overview=full&geometries=geojson`;
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.routes && data.routes.length > 0) {
+                    const geometry = data.routes[0].geometry;
+                    routeLayer = L.geoJSON(geometry, {
+                        style: { color: '#3880ff', weight: 5, opacity: 0.7 }
+                    }).addTo(osmMap);
+                    osmMap.flyToBounds(routeLayer.getBounds(), {
+                        padding: [50, 50],
+                        duration: 1.5
+                    });
+                } else {
+                    console.log('No route found');
+                    osmMap.flyTo([lat, lng], 18, { duration: 1.5 });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching route:', error);
+                osmMap.flyTo([lat, lng], 18, { duration: 1.5 });
+            });
+    } else {
+        if (currentDestination) currentDestination = null;
+        osmMap.flyTo([lat, lng], 18, {
+            duration: 1.5,
+            noMoveStart: true
+        });
+    }
+
+    const locationControls2 = document.getElementById('location-controls2');
+    if (locationControls2) {
+        locationControls2.classList.remove('visible');
+    }
+
+    const searchBox2 = document.getElementById('search-box2');
+    if (searchBox2) {
+        searchBox2.value = '';
+    }
+
+    const links = document.querySelectorAll('.osm-location-link');
+    links.forEach(link => {
+        link.style.display = 'block';
+    });
 }
 
 function showNotAvailablePopup(campus) {
@@ -699,7 +602,7 @@ function showNotAvailablePopup(campus) {
 
     popup.innerHTML = `
         <span id="close-not-available" style="position: absolute; top: 5px; right: 10px; cursor: pointer; font-size: 20px;">×</span>
-        <h3>Campus No Disponible</h3>
+        <h3>Lugar No Disponible</h3>
         <p>Por el momento, el ${campus} no está disponible. ¿Desea viajar al Campus Principal?</p>
         <button id="accept-btn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Aceptar</button>
     `;
@@ -746,11 +649,15 @@ function showCampusSelectionPopup() {
 
     popup.innerHTML = `
         <span id="close-selection" style="position: absolute; top: 5px; right: 10px; cursor: pointer; font-size: 20px;">×</span>
-        <h3>¿Quieres ir a algún campus?</h3>
+        <h3>¿Quieres ir a algún lugar?</h3>
         <div style="margin: 10px;">
             <button id="campus1-btn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">Campus Principal</button>
             <button id="campus2-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Campus 2</button>
             <button id="campus3-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Campus 3</button>
+            <button id="jardin-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Jardin Botanico</button>
+            <button id="ccu-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Centro Cultural Universitario</button>
+            <button id="museo-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Museo Guanal</button>
+            <button id="sabancuy-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Campus Sabancuy</button>
         </div>
         <div id="action-buttons" style="display: none;">
             <button id="accept-selection-btn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">Aceptar</button>
@@ -776,24 +683,21 @@ function showCampusSelectionPopup() {
     });
 
     cancelBtn.addEventListener('click', () => {
-        osmMap.setZoom(osmMap.getZoom() - 3); // Reduce more zoom
+        osmMap.setZoom(osmMap.getZoom() - 3);
         popup.style.display = 'none';
     });
 
     closeBtn.addEventListener('click', () => {
-        osmMap.setZoom(osmMap.getZoom() - 3); // Same for close
+        osmMap.setZoom(osmMap.getZoom() - 3);
         popup.style.display = 'none';
     });
 }
 
-// Nueva función para actualizar los puntos de interés
 function updateInterestPoints(campus) {
-    // Limpiar marcadores de interés existentes
     interestMarkers[campus].forEach(marker => map.removeLayer(marker));
     interestMarkers[campus] = [];
 
-    // Si los puntos de interés están activos, añadirlos al mapa
-    if (interestPointsActive[campus]) {
+    if (interestPointsActive[campus] && interestPoints[campus]) {
         interestPoints[campus].forEach(point => {
             const marker = createInterestPointMarker(
                 point.coords[0],
@@ -815,7 +719,7 @@ function toggleInterestPoints(campus) {
     const interestButton = document.querySelector('.leaflet-control-interest');
     if (interestPointsActive[campus]) {
         interestButton.classList.add('active');
-        updateInterestPoints(campus); // Añadir puntos de interés
+        updateInterestPoints(campus);
     } else {
         interestButton.classList.remove('active');
         interestMarkers[campus].forEach(marker => map.removeLayer(marker));
@@ -827,10 +731,65 @@ function toggleInterestPoints(campus) {
     }
 }
 
+function updateLocationControls() {
+    const sections = document.querySelectorAll('.building-section');
+    sections.forEach(section => {
+        if (section.dataset.campus === currentCampus) {
+            section.style.display = 'block';
+        } else {
+            section.style.display = 'none';
+        }
+    });
+}
+
+function updateOSMLocationControls() {
+    const locationControls2 = document.getElementById('location-controls2');
+    if (!locationControls2) return;
+
+    let controlsHTML = `
+        <div id="search-container2">
+            <input type="text" 
+                id="search-box2" 
+                placeholder="Buscar campus..."
+                autocomplete="off">
+        </div>
+        <div class="campus-section">
+            <h2>Lugares</h2>`;
+
+    Object.keys(osmMap.campusMarkers).forEach(campus => {
+        const marker = osmMap.campusMarkers[campus];
+        const [lat, lng] = [marker.getLatLng().lat, marker.getLatLng().lng];
+        controlsHTML += `
+            <a href="#" class="osm-location-link" 
+               onclick="flyToOSMLocation(${lat}, ${lng}, '${campus}')"
+               data-search="${campus.toLowerCase()}">
+                ${campus}
+            </a>`;
+    });
+
+    controlsHTML += '</div>';
+    locationControls2.innerHTML = controlsHTML;
+
+    const searchBox2 = document.getElementById('search-box2');
+    if (searchBox2) {
+        searchBox2.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const links = document.querySelectorAll('.osm-location-link');
+            links.forEach(link => {
+                const searchableText = link.dataset.search;
+                const match = searchableText.includes(searchTerm);
+                link.style.display = match ? 'block' : 'none';
+            });
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const mapElement = document.getElementById('map');
     const osmMapElement = document.getElementById('osm-map');
     const pantallaBienvenida = document.getElementById('pantallaBienvenida');
+    const guiaContainer = document.getElementById('guia-container');
+    const guiaContainer2 = document.getElementById('guia-container2');
 
     if (!mapElement) {
         console.error('DOMContentLoaded: #map element not found');
@@ -889,7 +848,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     ${feature.properties.description || 'No hay descripción disponible.'}
                 `);
                 layer.on('click', () => {
-                    const coords = feature.geometry.coordinates[0][0]; // Centroide aproximado
+                    const coords = feature.geometry.coordinates[0][0];
                     flyToLocation(coords[1], coords[0], feature.properties.faculty, feature.properties.name, campus);
                     showLocationDetails(
                         feature.properties.faculty,
@@ -904,7 +863,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         markersLayers[campus] = L.layerGroup();
 
-        // Cargar GeoJSON para cada campus
         fetch(campuses[campus].geojson)
             .then(response => response.json())
             .then(data => {
@@ -929,7 +887,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (osmMapElement) {
         osmMap = L.map('osm-map', {
             crs: L.CRS.EPSG3857,
-            minZoom: 12,
+            minZoom: 10.5,
             maxZoom: 21,
             zoomDelta: 0.3,
             zoomSnap: 0
@@ -940,7 +898,6 @@ document.addEventListener('DOMContentLoaded', function() {
             maxZoom: 21,
             maxNativeZoom: 19
         });
-
         osmMap.campusMarkers = {
             'Campus Principal': L.marker([18.646626696426264, -91.81813061518552], {
                 title: 'UNACAR'
@@ -962,14 +919,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 <b>UNACAR Universidad</b><br>
                 <small>Universidad Autónoma del Carmen</small><br>
                 Campus 3, Ciudad del Carmen
-            `, { autoClose: false, closeOnClick: false })
+            `, { autoClose: false, closeOnClick: false }),
+            'Jardin Botanico': L.marker([18.636835943623314, -91.779242388015359], {
+                title: 'UNACAR'
+            }).bindPopup(`
+                <b>Jardin Botanico</b><br>
+                <small>Universidad Autónoma del Carmen</small><br>
+                Facultad de Ciencias Naturales, Ciudad del Carmen
+            `, { autoClose: false, closeOnClick: false }),
+            'Centro Cultural Universitario': L.marker([18.638626189564732, -91.83462499633609], {
+                title: 'UNACAR'
+            }).bindPopup(`
+                <b>Centro Cultural Universitario</b><br>
+                <small>Universidad Autónoma del Carmen</small><br>
+                CCU, Ciudad del Carmen
+            `, { autoClose: false, closeOnClick: false }),
+            'Museo Guanal': L.marker([18.633442367616624, -91.83217897408228], {
+                title: 'UNACAR'
+            }).bindPopup(`
+                <b>Museo Guanal</b><br>
+                <small>Universidad Autónoma del Carmen</small><br>
+                Museo Universitario de Ciencias y Artes, Ciudad del Carmen
+            `, { autoClose: false, closeOnClick: false }),
+            'Campus Sabancuy': L.marker([18.9694735975256, -91.18848920523213], {
+                title: 'UNACAR'
+            }).bindPopup(`
+                <b>UNACAR Preparatoria</b><br>
+                <small>Universidad Autónoma del Carmen</small><br>
+                Campus Sabancuy, Ciudad del Carmen
+            `, { autoClose: false, closeOnClick: false }),
         };
 
-        // Mantener popups siempre abiertos y manejar clics en marcadores
         Object.entries(osmMap.campusMarkers).forEach(([campus, marker]) => {
             marker.addTo(osmMap).openPopup();
             marker.on('popupclose', () => {
-                // Reabrir el popup inmediatamente si se intenta cerrar
                 marker.openPopup();
             });
             marker.on('click', () => {
@@ -985,9 +968,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Alternar capas según el zoom
-    const thresholdZoom = 0.5; // Umbral para capa detallada
-    const intermediateZoomThreshold = -0.5; // Umbral para capa intermedia
-    const minZoom = -1.5; // Zoom mínimo para OpenStreetMap
+    const thresholdZoom = 0.5;
+    const intermediateZoomThreshold = -0.5;
+    const minZoom = -1.5;
     let isOSMVisible = false;
 
     function getClosestCampus() {
@@ -1032,6 +1015,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleMapTransition(currentZoom, fromOSM = false) {
         console.log('Handle transition - Zoom level:', currentZoom, 'OSM visible:', isOSMVisible, 'From OSM:', fromOSM, 'Current Campus:', currentCampus);
 
+        const guiaContainer = document.getElementById('guia-container');
+        const guiaContainer2 = document.getElementById('guia-container2');
+
         if (currentZoom === minZoom && osmMap && osmMapElement && !fromOSM) {
             if (!isOSMVisible) {
                 console.log('Mostrando mapa de OpenStreetMap');
@@ -1042,11 +1028,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 osmMap.addLayer(osmLayer);
                 Object.values(osmMap.campusMarkers).forEach(marker => {
                     osmMap.addLayer(marker);
-                    marker.openPopup(); // Asegurar que los popups estén abiertos
+                    marker.openPopup();
                 });
                 ignoreNextZoomEnd = true;
                 osmMap.setView(osmMap.campusMarkers[currentCampus].getLatLng(), 18);
                 osmMap.invalidateSize();
+                if (guiaContainer) guiaContainer.style.display = 'none';
+                if (guiaContainer2) {
+                    guiaContainer2.style.display = 'block';
+                    updateOSMLocationControls();
+                }
             }
         } else if ((currentZoom > minZoom || fromOSM) && isOSMVisible) {
             console.log('Ocultando OpenStreetMap y mostrando mapa SVG de', currentCampus);
@@ -1072,6 +1063,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 switchToCampus(currentCampus);
                 map.setZoom(svgZoom);
+                if (guiaContainer) guiaContainer.style.display = 'block';
+                if (guiaContainer2) guiaContainer2.style.display = 'none';
                 return;
             }
 
@@ -1092,6 +1085,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 map.addLayer(intermediateBaseLayers[currentCampus]);
                 map.addLayer(markersLayers[currentCampus]);
             }
+            if (guiaContainer) guiaContainer.style.display = 'block';
+            if (guiaContainer2) guiaContainer2.style.display = 'none';
         } else if (!isOSMVisible && !fromOSM) {
             if (currentZoom >= thresholdZoom) {
                 console.log('Mostrando capa detallada y base detallada de', currentCampus);
@@ -1116,9 +1111,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 map.addLayer(intermediateBaseLayers[currentCampus]);
                 map.addLayer(markersLayers[currentCampus]);
             }
+            if (guiaContainer) guiaContainer.style.display = 'block';
+            if (guiaContainer2) guiaContainer2.style.display = 'none';
         }
 
-        // Actualizar puntos de interés después de cambiar capas
         updateInterestPoints(currentCampus);
     }
 
@@ -1159,27 +1155,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Control personalizado con botón de geolocalización
-    L.Control.CustomZoom = L.Control.Zoom.extend({
+    L.Control.CustomZoomVector = L.Control.Zoom.extend({
         onAdd: function(map) {
             const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
             const zoomDelta = 0.3;
 
-            const geolocation = L.DomUtil.create('a', 'leaflet-control-geolocation', container);
-            geolocation.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
-            geolocation.href = '#';
-            geolocation.title = 'Activar/Desactivar Geolocalización';
-            L.DomEvent.on(geolocation, 'click', function(e) {
-                L.DomEvent.preventDefault(e);
-                L.DomEvent.stopPropagation(e);
-                toggleGeolocation();
-            });
-
-            const meditation = L.DomUtil.create('a', 'leaflet-control-interest', container);
-            meditation.innerHTML = '<i class="fas fa-person"></i>';
-            meditation.href = '#';
-            meditation.title = 'Ver Puntos de Interés';
-            L.DomEvent.on(meditation, 'click', function(e) {
+            const interest = L.DomUtil.create('a', 'leaflet-control-interest', container);
+            interest.innerHTML = '<i class="fas fa-person"></i>';
+            interest.href = '#';
+            interest.title = 'Ver Puntos de Interés';
+            L.DomEvent.on(interest, 'click', function(e) {
                 L.DomEvent.preventDefault(e);
                 L.DomEvent.stopPropagation(e);
                 toggleInterestPoints(currentCampus);
@@ -1243,7 +1228,80 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     map.removeControl(map.zoomControl);
-    map.addControl(new L.Control.CustomZoom({ position: 'topleft' }));
+    map.addControl(new L.Control.CustomZoomVector({ position: 'topleft' }));
+
+    if (osmMap) {
+        L.Control.CustomZoomOSM = L.Control.Zoom.extend({
+            onAdd: function(map) {
+                const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
+                const zoomDelta = 0.3;
+
+                const geolocation = L.DomUtil.create('a', 'leaflet-control-geolocation', container);
+                geolocation.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
+                geolocation.href = '#';
+                geolocation.title = 'Activar/Desactivar Geolocalización';
+                L.DomEvent.on(geolocation, 'click', function(e) {
+                    L.DomEvent.preventDefault(e);
+                    L.DomEvent.stopPropagation(e);
+                    toggleGeolocation();
+                });
+
+                this._zoomInButton = this._createButton(
+                    '+', '+ Zoom', 'leaflet-control-zoom-in', container,
+                    function(e) {
+                        L.DomEvent.preventDefault(e);
+                        L.DomEvent.stopPropagation(e);
+                        osmMap.setZoom(osmMap.getZoom() + zoomDelta);
+                    }
+                );
+
+                this._zoomOutButton = this._createButton(
+                    '−', '- Zoom', 'leaflet-control-zoom-out', container,
+                    function(e) {
+                        L.DomEvent.preventDefault(e);
+                        L.DomEvent.stopPropagation(e);
+                        osmMap.setZoom(osmMap.getZoom() - zoomDelta);
+                    }
+                );
+
+                this._updateDisabled();
+                map.on('zoomend zoomlevelschange', this._updateDisabled, this);
+
+                return container;
+            },
+
+            _createButton: function(html, title, className, container, fn) {
+                const link = L.DomUtil.create('a', className, container);
+                link.innerHTML = html;
+                link.href = '#';
+                link.title = title;
+
+                L.DomEvent.on(link, 'mousedown dblclick', L.DomEvent.stopPropagation)
+                    .on(link, 'click', L.DomEvent.stop)
+                    .on(link, 'click', fn, this);
+
+                return link;
+            },
+
+            _updateDisabled: function() {
+                const map = this._map;
+                const className = 'leaflet-disabled';
+
+                L.DomUtil.removeClass(this._zoomInButton, className);
+                L.DomUtil.removeClass(this._zoomOutButton, className);
+
+                if (map._zoom >= map.getMaxZoom()) {
+                    L.DomUtil.addClass(this._zoomInButton, className);
+                }
+                if (map._zoom <= map.getMinZoom()) {
+                    L.DomUtil.addClass(this._zoomOutButton, className);
+                }
+            }
+        });
+
+        osmMap.removeControl(osmMap.zoomControl);
+        osmMap.addControl(new L.Control.CustomZoomOSM({ position: 'topleft' }));
+    }
 
     function createMarker(lat, lng, title, building, iconConfig, faculty, photos, comments, campus, isShared = false) {
         const customIcon = L.divIcon({
@@ -1311,14 +1369,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return marker;
     }
 
-    const infoIcon = document.querySelector('.fa-magnifying-glass');
+    const infoIcon = document.querySelector('.palpitante3 .fa-magnifying-glass');
     const locationControls = document.getElementById('location-controls');
-    
+    const infoIcon2 = document.querySelector('.palpitante5 .fa-magnifying-glass');
+    const locationControls2 = document.getElementById('location-controls2');
+
     if (infoIcon && locationControls) {
         infoIcon.addEventListener('click', (e) => {
             e.stopPropagation();
             locationControls.classList.toggle('visible');
-            
             if (locationControls.classList.contains('visible')) {
                 const searchBox = document.getElementById('search-box');
                 if (searchBox) searchBox.value = '';
@@ -1328,6 +1387,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     const section = link.closest('.building-section');
                     if (section) section.style.display = 'block';
                 });
+                updateLocationControls();
+            }
+        });
+    }
+
+    if (infoIcon2 && locationControls2) {
+        infoIcon2.addEventListener('click', (e) => {
+            e.stopPropagation();
+            locationControls2.classList.toggle('visible');
+            if (locationControls2.classList.contains('visible')) {
+                const searchBox2 = document.getElementById('search-box2');
+                if (searchBox2) searchBox2.value = '';
+                const links = document.querySelectorAll('.osm-location-link');
+                links.forEach(link => {
+                    link.style.display = 'block';
+                });
+                updateOSMLocationControls();
             }
         });
     }
@@ -1344,11 +1420,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (section) section.style.display = 'block';
             });
         }
+        if (locationControls2 && !locationControls2.contains(e.target) && infoIcon2 && !infoIcon2.contains(e.target)) {
+            locationControls2.classList.remove('visible');
+            const searchBox2 = document.getElementById('search-box2');
+            if (searchBox2) searchBox2.value = '';
+            const links = document.querySelectorAll('.osm-location-link');
+            links.forEach(link => {
+                link.style.display = 'block';
+            });
+        }
     });
 
     const imageUrls = [
         ...Object.keys(locations).flatMap(campus =>
-            Object.values(locations[campus]).map(data => data.icon.iconUrl)
+            Object.values(locations[campus]).map(data => data.icon ? data.icon.iconUrl : '')
         ),
         ...Object.keys(locations).flatMap(campus =>
             Object.values(locations[campus]).flatMap(data =>
@@ -1368,7 +1453,7 @@ document.addEventListener('DOMContentLoaded', function() {
             )
         ),
         '../image/pines/pin-usuario.svg'
-    ];
+    ].filter(url => url);
     preloadImages(imageUrls);
 
     let controlsHTML = `
@@ -1380,7 +1465,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>`;
     
     for (const campus of Object.keys(locations)) {
-        controlsHTML += `<div class="building-section"><h2>${campus}</h2>`;
+        controlsHTML += `<div class="building-section" data-campus="${campus}"><h2>${campus}</h2>`;
         for (const [building, data] of Object.entries(locations[campus])) {
             controlsHTML += `<h3>${building}</h3>`;
             if (data.usarIconoGrupal) {
@@ -1414,6 +1499,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (locationControls) {
         locationControls.innerHTML = controlsHTML;
+        updateLocationControls();
     }
 
     const searchBox = document.getElementById('search-box');
@@ -1450,6 +1536,7 @@ document.addEventListener('DOMContentLoaded', function() {
             contenido.style.display = 'block';
         }
     });
-});
 
-window.flyToLocation = flyToLocation;
+    window.flyToLocation = flyToLocation;
+    window.flyToOSMLocation = flyToOSMLocation;
+});
