@@ -1,3 +1,4 @@
+// zoom2.js (modified)
 let map; // Mapa SVG con L.CRS.Simple
 let osmMap; // Mapa de OpenStreetMap con L.CRS.EPSG3857
 let osmLayer;
@@ -79,7 +80,7 @@ function flyToLocation(lat, lng, building, placeName, campus, isInterestPoint = 
         currentPinMarker = null;
     }
 
-    map.flyTo([lat, lng], 1,{
+    map.flyTo([lat, lng], 1, {
         duration: 1.5,
         noMoveStart: true
     });
@@ -175,8 +176,8 @@ function flyToLocation(lat, lng, building, placeName, campus, isInterestPoint = 
     });
 }
 
-function showLocationDetails(building, placeName, faculty, photos, comments, campus) {
-    console.log('showLocationDetails called with:', { building, placeName, faculty, photos, comments, campus });
+function showLocationDetails(building, placeName, faculty, photos, comments, campus, showGoButton = false) {
+    console.log('showLocationDetails called with:', { building, placeName, faculty, photos, comments, campus, showGoButton });
 
     const detailsPanel = document.getElementById('location-details');
     if (!detailsPanel) {
@@ -205,13 +206,17 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
 
     const commentsHTML = safeComments.map(comment => `<p>${comment}</p>`).join('');
 
-    detailsPanel.innerHTML = `
+    let innerHTML = `
         <span class="close-btn">×</span>
         <h2>Zona: ${placeName}</h2>
         <div class="faculty">${faculty}</div>
         <div class="photos">${photoHTML}</div>
         <div class="comments">${commentsHTML}</div>
     `;
+    if (showGoButton) {
+        innerHTML += `<button class="go-to-map">Ir al mapa</button>`;
+    }
+    detailsPanel.innerHTML = innerHTML;
     detailsPanel.classList.add('visible');
     console.log('showLocationDetails: #location-details set to visible with content:', detailsPanel.innerHTML);
 
@@ -223,11 +228,21 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
             detailsPanel.classList.remove('visible');
             history.replaceState(null, null, '');
             if (currentPinMarker) {
-                currentPinMarker.closePopup();
                 map.removeLayer(currentPinMarker);
                 currentPinMarker = null;
             }
         }, { once: true });
+    }
+
+    if (showGoButton) {
+        const goButton = detailsPanel.querySelector('.go-to-map');
+        if (goButton) {
+            goButton.addEventListener('click', () => {
+                switchToCampus(campus);
+                detailsPanel.classList.remove('visible');
+                history.replaceState(null, null, '');
+            }, { once: true });
+        }
     }
 
     const photoItems = detailsPanel.querySelectorAll('.photo-item');
@@ -343,6 +358,116 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
 
     console.log('Adding fullscreen close button listener');
     fullscreenCloseBtn.addEventListener('click', fullscreenCloseListener);
+}
+
+function showOSMLocationDetails(building, placeName, faculty, photos, comments, campus, showGoButton = false) {
+    console.log('showOSMLocationDetails called with:', { building, placeName, faculty, photos, comments, campus, showGoButton });
+
+    const detailsPanel = document.getElementById('osm-location-details');
+    if (!detailsPanel) {
+        console.log('showOSMLocationDetails: #osm-location-details element not found in DOM');
+        return;
+    }
+
+    const safePhotos = Array.isArray(photos) ? photos : [];
+    const safeComments = Array.isArray(comments) ? comments : [comments || 'No hay comentarios disponibles.'];
+
+    const photoHTML = safePhotos.length > 0
+        ? safePhotos
+            .map(photo => {
+                const isObject = typeof photo === 'object' && photo.url;
+                const url = isObject ? photo.url : photo;
+                const isPanoramic = isObject && photo.isPanoramic;
+                const isVideo = /\.(mp4|webm|ogg)$/i.test(url);
+                if (isVideo) {
+                    return `<video src="${url}" alt="Video de ${placeName}" class="photo-item" controls></video>`;
+                } else {
+                    return `<img src="${url}" alt="Foto de ${placeName}" class="photo-item" data-panoramic="${isPanoramic ? 'true' : 'false'}">`;
+                }
+            })
+            .join('')
+        : '<p>Imágenes y videos muy pronto.</p>';
+
+    const commentsHTML = safeComments.map(comment => `<p>${comment}</p>`).join('');
+
+    let innerHTML = `
+        <span class="close-btn">×</span>
+        <h2>Zona: ${placeName}</h2>
+        <div class="faculty">${faculty}</div>
+        <div class="photos">${photoHTML}</div>
+        <div class="comments">${commentsHTML}</div>
+    `;
+    if (showGoButton) {
+        innerHTML += `<button class="go-to-map">Ir al mapa</button>`;
+    }
+    detailsPanel.innerHTML = innerHTML;
+    detailsPanel.classList.add('visible');
+    console.log('showOSMLocationDetails: #osm-location-details set to visible with content:', detailsPanel.innerHTML);
+
+    history.pushState({ popup: 'osm-location-details' }, null, '');
+
+    const closeBtn = detailsPanel.querySelector('.close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            detailsPanel.classList.remove('visible');
+            history.replaceState(null, null, '');
+        }, { once: true });
+    }
+
+    if (showGoButton) {
+        const goButton = detailsPanel.querySelector('.go-to-map');
+        if (goButton) {
+            goButton.addEventListener('click', () => {
+                switchToCampus(campus);
+                detailsPanel.classList.remove('visible');
+                history.replaceState(null, null, '');
+            }, { once: true });
+        }
+    }
+
+    const photoItems = detailsPanel.querySelectorAll('.photo-item');
+    photoItems.forEach(item => {
+        item.addEventListener('click', () => {
+            if (item.tagName === 'IMG' && item.dataset.panoramic === 'true') {
+                const panoramaContainer = document.getElementById('panorama-viewer');
+                if (panoramaContainer) {
+                    panoramaContainer.classList.add('visible');
+                    const panoramaDiv = document.getElementById('panorama');
+                    if (panoramaDiv) {
+                        panoramaDiv.innerHTML = '';
+                    }
+                    pannellum.viewer('panorama', {
+                        type: 'equirectangular',
+                        panorama: item.src,
+                        autoLoad: true,
+                        showControls: true,
+                        yaw: 0,
+                        pitch: 0,
+                        hfov: 100
+                    });
+                    history.replaceState({ popup: 'panorama-viewer' }, null, '');
+                }
+            } else {
+                const fullscreenContainer = document.getElementById('fullscreen-image');
+                const fullscreenImg = fullscreenContainer.querySelector('img');
+                const fullscreenVideo = fullscreenContainer.querySelector('video');
+                if (fullscreenContainer && fullscreenImg && fullscreenVideo) {
+                    if (item.tagName === 'VIDEO') {
+                        fullscreenVideo.src = item.src;
+                        fullscreenVideo.style.display = 'block';
+                        fullscreenImg.style.display = 'none';
+                    } else {
+                        fullscreenImg.src = item.src;
+                        fullscreenImg.alt = item.alt;
+                        fullscreenImg.style.display = 'block';
+                        fullscreenVideo.style.display = 'none';
+                    }
+                    fullscreenContainer.classList.add('visible');
+                    history.replaceState({ popup: 'fullscreen-image' }, null, '');
+                }
+            }
+        });
+    });
 }
 
 function createInterestPointMarker(lat, lng, title, building, photos, comments, campus) {
@@ -956,11 +1081,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 marker.openPopup();
             });
             marker.on('click', () => {
-                if (campus === 'Campus Principal') {
-                    switchToCampus(campus);
-                } else {
-                    showNotAvailablePopup(campus);
-                }
+                const campusData = campuses[campus];
+                flyToOSMLocation(marker.getLatLng().lat, marker.getLatLng().lng, campus);
+                showOSMLocationDetails(
+                    campus,
+                    campus,
+                    'UNACAR',
+                    campusData.photos || [],
+                    campusData.description || 'No hay descripción disponible.',
+                    campus,
+                    true
+                );
             });
         });
 

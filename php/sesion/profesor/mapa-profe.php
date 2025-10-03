@@ -116,6 +116,9 @@ ob_end_flush();
         <div class="menu-toggle" id="menu-toggle">☰</div>
         <div class="menu-container" id="menu-container">
             <div class="aboutme menu-option">
+                <a class="btn" data-key="opccalendario" href="html/bots.html">Bots</a>
+            </div> 
+            <div class="aboutme menu-option">
                 <a class="btn" data-key="opccalendario" onclick="showPopup()">Mostrar AFIS</a>
             </div>
             <div class="aboutme menu-option">

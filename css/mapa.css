@@ -783,7 +783,7 @@ tr:nth-child(even) td {
     bottom: 45px;
     width: auto;
     height: 1px;
-    z-index: 11;
+    z-index: -3;
 }
 
 .palpitante2 h2 {
@@ -792,6 +792,7 @@ tr:nth-child(even) td {
     text-shadow: 0.08px 0.08px 0 #000;
     animation: palpitante2 8s ease-in-out forwards;
     animation-delay: 3s;
+    margin-top: 20px;
 }
 .palpitante4 h2 {
     font-size: 1px;
@@ -799,6 +800,7 @@ tr:nth-child(even) td {
     text-shadow: 0.08px 0.08px 0 #000;
     animation: palpitante4 8s ease-in-out forwards;
     animation-delay: 3s;
+    margin-top: 20px;
 }
 @keyframes palpitante {/*lupa*/
     from {
@@ -1143,24 +1145,73 @@ tr:nth-child(even) td {
     transition: all 0.3s ease;
     z-index: 21;
 }
-#location-details2 {
+#osm-location-details {
     position: fixed;
-    left: 0px;
-    right: 0px;
-    bottom: 0px;
-    top: 65%;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 15px;
-    border-radius: 20px 20px 0 0;
-    box-shadow: 0 -2px 15px rgba(0,0,0,0.2);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    z-index: 1000;
+    width: 80%;
+    height: auto;
+    max-width: 800px;
+    max-height: 80%;
     overflow-y: auto;
-    transform: translateY(100%);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-    z-index: 21;
+    display: none;
+}
+#osm-location-details h2{
+    font-size: 22px;
+}
+#osm-location-details.visible {
+    display: block;
 }
 
+#osm-location-details .close-btn {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    cursor: pointer;
+    font-size: 35px;
+}
+
+#osm-location-details .photos img,
+#osm-location-details .photos video {
+    width: 150px;
+    height: 100px;
+    border-radius: 5px;
+    gap: 10px;
+    margin: 5px 0;
+    cursor: pointer;
+}
+
+#osm-location-details .go-to-map {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.3s ease;
+}
+
+#osm-location-details .go-to-map:hover {
+    background-color: #45a049;
+    transform: scale(1.05);
+}
+.pnlm-fullscreen-toggle-button{
+    background-color: white !important;
+    border-radius: 50%;
+    width: 29px;
+    height: 29px;
+}
+.pnlm-controls{
+    background-color: rgba(255, 255, 255, 0) ;
+    border-radius: 50%;
+}
 #location-details.visible {
     transform: translateY(0);
     opacity: 1;
@@ -1237,7 +1288,13 @@ tr:nth-child(even) td {
     cursor: pointer;
     color: #00000000;
 }
-#location-details2 .photos img {
+#osm-location-details .photos{
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+#osm-location-details .photos img{
     width: 150px;
     height: 100px;
     object-fit: cover;
@@ -1456,7 +1513,7 @@ border-bottom: 0px solid black !important;
 }
 
 .barra p {
-    font-size: 15px;
+    font-size: 14px;
     margin: 0; /* Elimina márgenes que podrían desalinearlo */
 }
 /*final barra final----------------------------------------------------------------------------------------------------*/
@@ -1706,6 +1763,77 @@ border-bottom: 0px solid black !important;
             transform: scale(0)translateX(0);
         }
     }
+    @keyframes palpitante4 {
+        0%{
+            transform: scale(0) translate(0px);
+        }
+        10%{
+            transform: scale(4) translateX();
+        }
+        10%{
+            transform: scale(8) translateX();
+        }
+        20%{
+            transform: scale(12) translateX(10px) translateY(0px);
+            color: #ffffff;
+        }
+        25%{
+            transform: scale(12) translateX(10px)  translateY(-.5px);
+            color: #178cda;
+        }
+        30%{
+            transform: scale(12) translateX(10px) translateY(0px);
+            color: #ffffff;
+        }
+        35%{
+            transform: scale(12) translateX(10px) translateY(0px) ;
+            color: #ffffff;
+        }
+        40%{
+            transform: scale(12) translateX(10px) translateY(-.5px);
+            color: #178cda;
+        }
+        45%{
+            transform: scale(12) translateX(10px) translateY(0px);
+            color: #ffffff;
+        }
+        50%{
+            transform: scale(12) translateX(10px) translateY(0px);
+            color: #ffffff;
+        }
+        55%{
+            transform: scale(12) translateX(10px) translateY(-.5px);
+            color: #178cda;
+        }
+        60%{
+            transform: scale(12) translateX(10px) translateY(0px);
+            color: #ffffff;
+        }
+        65%{
+            transform: scale(12) translateX(10px) translateY(0px);
+            color: #ffffff;
+        }
+        70%{
+            transform: scale(12) translateX(10px) translateY(-.5px);
+            color: #178cda;
+        }
+        75%{
+            transform: scale(12) translateX(10px) translateY(0px);
+            color: #ffffff;
+        }
+        80%{
+            transform: scale(12) translateX(10px) translateY(0px);
+        }
+        90%{
+            transform: scale(8) translateX() ;
+        }
+        95%{
+            transform: scale(4) translateX();
+        }
+        100%{
+            transform: scale(0)translateX(0);
+        }
+    }
     
 }
 @media only screen and (max-width: 660px) {
@@ -1767,6 +1895,7 @@ border-bottom: 0px solid black !important;
     #map-container{
         top: 0px;
     }
+    
 }
 @media only screen and (min-width: 551px) and (max-width:768px){
     .barra p {

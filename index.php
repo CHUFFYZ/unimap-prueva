@@ -99,7 +99,10 @@ if (!empty($_SESSION)) {
             </div>
         </div>
         <div class="menu-toggle" id="menu-toggle">☰</div>
-        <div class="menu-container" id="menu-container">           
+        <div class="menu-container" id="menu-container"> 
+            <div class="aboutme menu-option">
+                <a class="btn" data-key="opccalendario" href="html/bots.html">Bots</a>
+            </div>          
             <div class="aboutme menu-option">
                 <a class="btn" data-key="opccalendario" href="html/calendario.html">Calendario Escolar</a>
             </div>

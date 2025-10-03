@@ -117,6 +117,9 @@ ob_end_flush();
         <div class="menu-toggle" id="menu-toggle">☰</div>
         <div class="menu-container" id="menu-container">
             <div class="aboutme menu-option">
+                <a class="btn" data-key="opccalendario" href="html/bots.html">Bots</a>
+            </div> 
+            <div class="aboutme menu-option">
                 <a class="btn" data-key="opccalendario" onclick="showPopup()">Mostrar AFIS</a>
             </div>
             <div class="aboutme menu-option">
@@ -133,30 +136,34 @@ ob_end_flush();
             </div>
         </div>
     </div>
+    
     <div id="map-container">
         <div id="map"></div>
         <div id="osm-map"></div>
     </div>
     <!--<div class="palpitante"></div>-->
-    <div class="palpitante2">
-            <h2><-- ¡Consulta Edificios Aquí!</h2>
-        </div>
+    
+    
     <div id="guia-container">
         <div class="palpitante3">
             <i class="fa-solid fa-magnifying-glass" aria-label="Abrir panel de ubicaciones"></i>
         </div>
+        <div class="palpitante2">
+            <h2><-- ¡Consulta Edificios Aquí!</h2>
+        </div>
         <div id="location-controls"></div>
         <div id="location-details"></div>
     </div>
-    <div class="palpitante4">
-            <h2><-- ¡Consulta lugares Aquí!</h2>
-        </div>
+    
     <div id="guia-container2">
         <div class="palpitante5">
             <i class="fa-solid fa-magnifying-glass" aria-label="Abrir panel de ubicaciones"></i>
         </div>
+        <div class="palpitante4">
+            <h2><-- ¡Consulta lugares Aquí!</h2>
+        </div>
         <div id="location-controls2"></div>
-        <div id="location-details2"></div>
+        <div id="osm-location-details" class="location-details"></div>
     </div>
     <div id="fullscreen-image">
             <span class="fullscreen-close-btn">×</span>
