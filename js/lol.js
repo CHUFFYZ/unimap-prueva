@@ -1,5 +1,6 @@
-let map;
-let osmMap;
+// zoom2.js (modified)
+let map; // Mapa SVG con L.CRS.Simple
+let osmMap; // Mapa de OpenStreetMap con L.CRS.EPSG3857
 let osmLayer;
 let baseLayers = {}, intermediateBaseLayers = {}, detailedBaseLayers = {}, detailedLayers = {}, markersLayers = {};
 let markers = { 'Campus Principal': {}, 'Campus 2': {}, 'Campus 3': {}, 'Jardin Botanico': {}, 'Centro Cultural Universitario': {}, 'Museo Guanal': {}, 'Campus Sabancuy': {}};
@@ -13,16 +14,13 @@ let accuracyCircle = null;
 let routeLayer = null;
 let currentDestination = null;
 let firstGeoUpdate = false;
-let currentCampus = 'Campus Principal';
-let ignoreNextZoomEnd = false;
+let currentCampus = 'Campus Principal'; // Campus por defecto
+let ignoreNextZoomEnd = false; // Flag para ignorar el zoomend inicial en OSM
 
+// Almacenar referencias a los event listeners activos
 let fullscreenCloseListener = null;
 let panoramaCloseListener = null;
-let geolocationWatchId = null;
-
-let currentFloorOverlay = null;
-let levelMenu = null;
-let buildingMarker = null;
+let geolocationWatchId = null; // Para limpiar el watchPosition
 
 function preloadImages(imageUrls) {
     imageUrls.forEach(url => {
@@ -38,14 +36,14 @@ function switchToCampus(campus) {
     map.setMaxBounds(bounds);
     map.eachLayer(layer => map.removeLayer(layer));
     baseLayers[campus].addTo(map);
-    if (!currentFloorOverlay) {
-        map.addLayer(markersLayers[campus]);
-    }
+    markersLayers[campus].addTo(map);
     map.fitBounds(bounds);
     map.setView(center, zoom);
+    // Reactivar puntos de interés si estaban activos
     if (interestPointsActive[campus]) {
         updateInterestPoints(campus);
     }
+    // Mostrar panel de búsqueda SVG y ocultar el de OSM
     const guiaContainer = document.getElementById('guia-container');
     const guiaContainer2 = document.getElementById('guia-container2');
     const osmMapElement = document.getElementById('osm-map');
@@ -58,49 +56,58 @@ function switchToCampus(campus) {
         guiaContainer.style.display = 'block';
         guiaContainer2.style.display = 'none';
     }
+    // Actualizar el panel de ubicaciones para mostrar solo el currentCampus
     updateLocationControls();
-    if (currentFloorOverlay) {
-        map.removeLayer(currentFloorOverlay);
-        currentFloorOverlay = null;
-    }
-    if (levelMenu) {
-        document.body.removeChild(levelMenu);
-        levelMenu = null;
-    }
 }
 
 function flyToLocation(lat, lng, building, placeName, campus, isInterestPoint = false) {
-    if (!map) return;
-    if (isFlying) return;
+    if (!map) {
+        console.log('flyToLocation: Map not initialized');
+        return;
+    }
+
+    if (isFlying) {
+        console.log('flyToLocation: Already flying, ignoring');
+        return;
+    }
+
     isFlying = true;
+
     map.closePopup();
+
     if (currentPinMarker) {
         map.removeLayer(currentPinMarker);
         currentPinMarker = null;
     }
+
     map.flyTo([lat, lng], 1, {
         duration: 1.5,
         noMoveStart: true
     });
+
     const locationControls = document.getElementById('location-controls');
     if (locationControls) {
         locationControls.classList.remove('visible');
     }
+
     const searchBox = document.getElementById('search-box');
     if (searchBox) {
         searchBox.value = '';
     }
+
     const links = document.querySelectorAll('.location-link');
     links.forEach(link => {
         link.style.display = 'block';
         const section = link.closest('.building-section');
         if (section) section.style.display = 'block';
     });
+
     Object.values(markers[campus]).flat().forEach(m => {
         if (m._icon) m._icon.classList.remove('marker-animated');
     });
     const popups = document.querySelectorAll('.leaflet-popup-content-wrapper');
     popups.forEach(popup => popup.classList.remove('popup-animated'));
+
     map.once('moveend', () => {
         if (isInterestPoint) {
             const pinMarker = createInterestPinMarker(lat, lng, placeName, building, campus);
@@ -112,22 +119,29 @@ function flyToLocation(lat, lng, building, placeName, campus, isInterestPoint = 
         } else {
             const markerGroup = markers[campus][building];
             if (!markerGroup) {
+                console.log(`flyToLocation: No marker group found for building ${building} in ${campus}`);
                 isFlying = false;
                 return;
             }
+
             const targetMarker = markerGroup.find(m => {
                 const latlng = m.getLatLng();
                 return Math.abs(latlng.lat - lat) < 0.0001 && Math.abs(latlng.lng - lng) < 0.0001;
             });
+
             if (!targetMarker) {
+                console.log(`flyToLocation: No target marker found at [${lat}, ${lng}] for building ${building} in ${campus}`);
                 isFlying = false;
                 return;
             }
+
             let markerAttempts = 0;
             const maxMarkerAttempts = 10;
             const animateMarkerAndPopup = () => {
                 if (targetMarker._icon) {
+                    console.log('Animando marcador y popup para', placeName);
                     targetMarker._icon.classList.add('marker-animated');
+
                     targetMarker.once('popupopen', () => {
                         const popupElement = document.querySelector('.leaflet-popup-content-wrapper');
                         if (popupElement) {
@@ -136,7 +150,9 @@ function flyToLocation(lat, lng, building, placeName, campus, isInterestPoint = 
                             popupElement.classList.add('popup-animated');
                         }
                     });
+
                     targetMarker.openPopup();
+
                     setTimeout(() => {
                         const popupElement = document.querySelector('.leaflet-popup-content-wrapper');
                         if (popupElement && !popupElement.classList.contains('popup-animated')) {
@@ -147,104 +163,31 @@ function flyToLocation(lat, lng, building, placeName, campus, isInterestPoint = 
                     }, 500);
                 } else if (markerAttempts < maxMarkerAttempts) {
                     markerAttempts++;
+                    console.log('Reintentando animación de marcador, intento', markerAttempts);
                     setTimeout(animateMarkerAndPopup, 300);
+                } else {
+                    console.log('Máximo de intentos alcanzado, no se pudo animar el marcador para', placeName);
                 }
             };
+
             animateMarkerAndPopup();
         }
         isFlying = false;
     });
 }
 
-function startLevelExploration(campus, faculty, buildingCode) {
-    const buildingData = locations[campus][faculty].places.find(p => p.name === buildingCode);
-    if (!buildingData || !buildingData.floors) return;
-    const floors = buildingData.floors;
-    const { w, h } = campuses[campus];
-    const bounds = [[0, 0], [h, w]];
-    if (currentFloorOverlay) {
-        map.removeLayer(currentFloorOverlay);
-        currentFloorOverlay = null;
-    }
-    buildingMarker = null;
-    if (markers[campus][faculty]) {
-        buildingMarker = markers[campus][faculty].find(m => {
-            const latlng = m.getLatLng();
-            return Math.abs(latlng.lat - buildingData.coords[0]) < 0.0001 && Math.abs(latlng.lng - buildingData.coords[1]) < 0.0001;
-        });
-        if (buildingMarker && buildingMarker._icon) {
-            buildingMarker._icon.style.display = 'none';
-        }
-    }
-    const initialFloorSvgUrl = `../../../image/locations/CP/galeria/${buildingCode}/p1.svg`;
-    const svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svgElement.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    svgElement.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    svgElement.setAttribute("preserveAspectRatio", "none");
-    svgElement.innerHTML = `<image href="${initialFloorSvgUrl}" x="0" y="0" width="100%" height="100%" />`;
-    currentFloorOverlay = L.svgOverlay(svgElement, bounds, {
-        opacity: 1,
-        interactive: false
-    }).addTo(map);
-    const mapContainer = document.getElementById('map');
-    mapContainer.style.position = 'relative';
-    if (levelMenu) {
-        document.body.removeChild(levelMenu);
-    }
-    levelMenu = document.createElement('div');
-    levelMenu.id = 'level-menu';
-    for (let i = 1; i <= floors; i++) {
-        const levelBtn = document.createElement('button');
-        levelBtn.textContent = `P${i}`;
-        levelBtn.addEventListener('click', () => {
-            if (currentFloorOverlay) {
-                map.removeLayer(currentFloorOverlay);
-            }
-            const floorSvgUrl = `../../../image/locations/CP/galeria/${buildingCode}/p${i}.svg`;
-            const newSvgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            newSvgElement.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-            newSvgElement.setAttribute("viewBox", `0 0 ${w} ${h}`);
-            newSvgElement.setAttribute("preserveAspectRatio", "none");
-            newSvgElement.innerHTML = `<image href="${floorSvgUrl}" x="0" y="0" width="100%" height="100%" />`;
-            currentFloorOverlay = L.svgOverlay(newSvgElement, bounds, {
-                opacity: 1,
-                interactive: false
-            }).addTo(map);
-            Array.from(levelMenu.querySelectorAll('button:not(.close-levels)')).forEach(btn => btn.style.backgroundColor = '');
-            levelBtn.style.backgroundColor = '#ccc';
-        });
-        levelMenu.appendChild(levelBtn);
-    }
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'close-levels';
-    closeBtn.textContent = 'X';
-    closeBtn.addEventListener('click', () => {
-        if (currentFloorOverlay) {
-            map.removeLayer(currentFloorOverlay);
-            currentFloorOverlay = null;
-        }
-        if (levelMenu) {
-            document.body.removeChild(levelMenu);
-            levelMenu = null;
-        }
-        if (buildingMarker && buildingMarker._icon) {
-            buildingMarker._icon.style.display = '';
-        }
-        buildingMarker = null;
-        map.addLayer(markersLayers[currentCampus]);
-    });
-    levelMenu.appendChild(closeBtn);
-    document.body.appendChild(levelMenu);
-    levelMenu.querySelector('button:not(.close-levels)').click();
-    map.removeLayer(markersLayers[currentCampus]);
-    map.invalidateSize();
-}
-
 function showLocationDetails(building, placeName, faculty, photos, comments, campus, showGoButton = false) {
+    console.log('showLocationDetails called with:', { building, placeName, faculty, photos, comments, campus, showGoButton });
+
     const detailsPanel = document.getElementById('location-details');
-    if (!detailsPanel) return;
+    if (!detailsPanel) {
+        console.log('showLocationDetails: #location-details element not found in DOM');
+        return;
+    }
+
     const safePhotos = Array.isArray(photos) ? photos : [];
     const safeComments = Array.isArray(comments) ? comments : [comments || 'No hay comentarios disponibles.'];
+
     const photoHTML = safePhotos.length > 0
         ? safePhotos
             .map(photo => {
@@ -260,14 +203,12 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
             })
             .join('')
         : '<p>Imágenes y videos muy pronto, si quieres probarlas ve a puntos de interés o edificios C-1 de la Facultad de Ciencias de la Información y C del área de Centro de Idiomas.</p>';
+
     const commentsHTML = safeComments.map(comment => `<p>${comment}</p>`).join('');
+
     let innerHTML = `
         <span class="close-btn">×</span>
         <h2>Zona: ${placeName}</h2>
-        <div class="top">
-            <span class="explore-levels"><i class="fas fa-layer-group"></i>Exploración por niveles</span>
-            <span class="rute"><i class="fas fa-layer-group"></i>Como llegar</span>
-        </div>
         <div class="faculty">${faculty}</div>
         <div class="photos">${photoHTML}</div>
         <div class="comments">${commentsHTML}</div>
@@ -277,7 +218,10 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
     }
     detailsPanel.innerHTML = innerHTML;
     detailsPanel.classList.add('visible');
+    console.log('showLocationDetails: #location-details set to visible with content:', detailsPanel.innerHTML);
+
     history.pushState({ popup: 'location-details' }, null, '');
+
     const closeBtn = detailsPanel.querySelector('.close-btn');
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
@@ -289,6 +233,7 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
             }
         }, { once: true });
     }
+
     if (showGoButton) {
         const goButton = detailsPanel.querySelector('.go-to-map');
         if (goButton) {
@@ -299,12 +244,7 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
             }, { once: true });
         }
     }
-    const exploreLevels = detailsPanel.querySelector('.explore-levels');
-    if (exploreLevels) {
-        exploreLevels.addEventListener('click', () => {
-            startLevelExploration(campus, building, placeName);
-        });
-    }
+
     const photoItems = detailsPanel.querySelectorAll('.photo-item');
     photoItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -325,45 +265,51 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
                         pitch: 0,
                         hfov: 100
                     });
-                    history.pushState({ popup: 'panorama-viewer' }, null, '');
+                    history.replaceState({ popup: 'panorama-viewer' }, null, '');
                 }
             } else {
                 const fullscreenContainer = document.getElementById('fullscreen-image');
-                if (fullscreenContainer) {
-                    const fullscreenImg = fullscreenContainer.querySelector('img');
-                    const fullscreenVideo = fullscreenContainer.querySelector('video');
-                    if (fullscreenImg && fullscreenVideo) {
-                        if (item.tagName === 'VIDEO') {
-                            fullscreenVideo.src = item.src;
-                            fullscreenVideo.style.display = 'block';
-                            fullscreenImg.style.display = 'none';
-                        } else {
-                            fullscreenImg.src = item.src;
-                            fullscreenImg.alt = item.alt;
-                            fullscreenImg.style.display = 'block';
-                            fullscreenVideo.style.display = 'none';
-                        }
-                        fullscreenContainer.classList.add('visible');
-                        history.pushState({ popup: 'fullscreen-image' }, null, '');
+                const fullscreenImg = fullscreenContainer.querySelector('img');
+                const fullscreenVideo = fullscreenContainer.querySelector('video');
+                if (fullscreenContainer && fullscreenImg && fullscreenVideo) {
+                    if (item.tagName === 'VIDEO') {
+                        fullscreenVideo.src = item.src;
+                        fullscreenVideo.style.display = 'block';
+                        fullscreenImg.style.display = 'none';
+                    } else {
+                        fullscreenImg.src = item.src;
+                        fullscreenImg.alt = item.alt;
+                        fullscreenImg.style.display = 'block';
+                        fullscreenVideo.style.display = 'none';
                     }
+                    fullscreenContainer.classList.add('visible');
+                    history.replaceState({ popup: 'fullscreen-image' }, null, '');
                 }
             }
         });
     });
+
     let panoramaCloseBtn = document.querySelector('.panorama-close-btn');
     if (!panoramaCloseBtn) {
+        console.log('Panorama close button not found, creating one');
         panoramaCloseBtn = document.createElement('span');
         panoramaCloseBtn.className = 'panorama-close-btn';
         panoramaCloseBtn.innerHTML = '×';
         const panoramaContainer = document.getElementById('panorama-viewer');
         if (panoramaContainer) {
             panoramaContainer.appendChild(panoramaCloseBtn);
+        } else {
+            console.log('Panorama container not found, cannot add close button');
+            return;
         }
     }
+
     if (panoramaCloseListener) {
         panoramaCloseBtn.removeEventListener('click', panoramaCloseListener);
     }
+
     panoramaCloseListener = () => {
+        console.log('Panorama close button clicked');
         const panoramaContainer = document.getElementById('panorama-viewer');
         if (panoramaContainer) {
             panoramaContainer.classList.remove('visible');
@@ -374,43 +320,58 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
             history.replaceState({ popup: 'location-details' }, null, '');
         }
     };
-    panoramaCloseBtn.addEventListener('click', panoramaCloseListener, { once: true });
+
+    console.log('Adding panorama close button listener');
+    panoramaCloseBtn.addEventListener('click', panoramaCloseListener);
 
     let fullscreenCloseBtn = document.querySelector('.fullscreen-close-btn');
     if (!fullscreenCloseBtn) {
+        console.log('Fullscreen close button not found, creating one');
         fullscreenCloseBtn = document.createElement('span');
         fullscreenCloseBtn.className = 'fullscreen-close-btn';
         fullscreenCloseBtn.innerHTML = '×';
         const fullscreenContainer = document.getElementById('fullscreen-image');
         if (fullscreenContainer) {
             fullscreenContainer.appendChild(fullscreenCloseBtn);
+        } else {
+            console.log('Fullscreen container not found, cannot add close button');
+            return;
         }
     }
+
     if (fullscreenCloseListener) {
         fullscreenCloseBtn.removeEventListener('click', fullscreenCloseListener);
     }
+
     fullscreenCloseListener = () => {
+        console.log('Fullscreen close button clicked');
         const fullscreenContainer = document.getElementById('fullscreen-image');
         if (fullscreenContainer) {
             fullscreenContainer.classList.remove('visible');
             const fullscreenImg = fullscreenContainer.querySelector('img');
             const fullscreenVideo = fullscreenContainer.querySelector('video');
             if (fullscreenImg) fullscreenImg.src = '';
-            if (fullscreenVideo) {
-                fullscreenVideo.src = '';
-                fullscreenVideo.pause();
-            }
+            if (fullscreenVideo) fullscreenVideo.src = '';
             history.replaceState({ popup: 'location-details' }, null, '');
         }
     };
-    fullscreenCloseBtn.addEventListener('click', fullscreenCloseListener, { once: true });
+
+    console.log('Adding fullscreen close button listener');
+    fullscreenCloseBtn.addEventListener('click', fullscreenCloseListener);
 }
 
 function showOSMLocationDetails(building, placeName, faculty, photos, comments, campus, showGoButton = false) {
+    console.log('showOSMLocationDetails called with:', { building, placeName, faculty, photos, comments, campus, showGoButton });
+
     const detailsPanel = document.getElementById('osm-location-details');
-    if (!detailsPanel) return;
+    if (!detailsPanel) {
+        console.log('showOSMLocationDetails: #osm-location-details element not found in DOM');
+        return;
+    }
+
     const safePhotos = Array.isArray(photos) ? photos : [];
     const safeComments = Array.isArray(comments) ? comments : [comments || 'No hay comentarios disponibles.'];
+
     const photoHTML = safePhotos.length > 0
         ? safePhotos
             .map(photo => {
@@ -426,7 +387,9 @@ function showOSMLocationDetails(building, placeName, faculty, photos, comments, 
             })
             .join('')
         : '<p>Imágenes y videos muy pronto.</p>';
+
     const commentsHTML = safeComments.map(comment => `<p>${comment}</p>`).join('');
+
     let innerHTML = `
         <span class="close-btn">×</span>
         <h2>Zona: ${placeName}</h2>
@@ -439,7 +402,10 @@ function showOSMLocationDetails(building, placeName, faculty, photos, comments, 
     }
     detailsPanel.innerHTML = innerHTML;
     detailsPanel.classList.add('visible');
+    console.log('showOSMLocationDetails: #osm-location-details set to visible with content:', detailsPanel.innerHTML);
+
     history.pushState({ popup: 'osm-location-details' }, null, '');
+
     const closeBtn = detailsPanel.querySelector('.close-btn');
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
@@ -447,6 +413,7 @@ function showOSMLocationDetails(building, placeName, faculty, photos, comments, 
             history.replaceState(null, null, '');
         }, { once: true });
     }
+
     if (showGoButton) {
         const goButton = detailsPanel.querySelector('.go-to-map');
         if (goButton) {
@@ -457,6 +424,7 @@ function showOSMLocationDetails(building, placeName, faculty, photos, comments, 
             }, { once: true });
         }
     }
+
     const photoItems = detailsPanel.querySelectorAll('.photo-item');
     photoItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -477,27 +445,25 @@ function showOSMLocationDetails(building, placeName, faculty, photos, comments, 
                         pitch: 0,
                         hfov: 100
                     });
-                    history.pushState({ popup: 'panorama-viewer' }, null, '');
+                    history.replaceState({ popup: 'panorama-viewer' }, null, '');
                 }
             } else {
                 const fullscreenContainer = document.getElementById('fullscreen-image');
-                if (fullscreenContainer) {
-                    const fullscreenImg = fullscreenContainer.querySelector('img');
-                    const fullscreenVideo = fullscreenContainer.querySelector('video');
-                    if (fullscreenImg && fullscreenVideo) {
-                        if (item.tagName === 'VIDEO') {
-                            fullscreenVideo.src = item.src;
-                            fullscreenVideo.style.display = 'block';
-                            fullscreenImg.style.display = 'none';
-                        } else {
-                            fullscreenImg.src = item.src;
-                            fullscreenImg.alt = item.alt;
-                            fullscreenImg.style.display = 'block';
-                            fullscreenVideo.style.display = 'none';
-                        }
-                        fullscreenContainer.classList.add('visible');
-                        history.pushState({ popup: 'fullscreen-image' }, null, '');
+                const fullscreenImg = fullscreenContainer.querySelector('img');
+                const fullscreenVideo = fullscreenContainer.querySelector('video');
+                if (fullscreenContainer && fullscreenImg && fullscreenVideo) {
+                    if (item.tagName === 'VIDEO') {
+                        fullscreenVideo.src = item.src;
+                        fullscreenVideo.style.display = 'block';
+                        fullscreenImg.style.display = 'none';
+                    } else {
+                        fullscreenImg.src = item.src;
+                        fullscreenImg.alt = item.alt;
+                        fullscreenImg.style.display = 'block';
+                        fullscreenVideo.style.display = 'none';
                     }
+                    fullscreenContainer.classList.add('visible');
+                    history.replaceState({ popup: 'fullscreen-image' }, null, '');
                 }
             }
         });
@@ -521,30 +487,24 @@ function createInterestPointMarker(lat, lng, title, building, photos, comments, 
         iconAnchor: [12, 12],
         popupAnchor: [0, -12]
     });
+
     const marker = L.marker([lat, lng], {
         title: title,
         icon: customIcon
     }).bindPopup(`<b>Zona: ${title}</b><br><small>${building}</small>`);
-    marker.on('click', () => {
+
+    marker.on('click', (e) => {
+        console.log(`marcador ${title} en [${lat}, ${lng}] en ${campus}`);
         flyToLocation(lat, lng, building, title, campus, true);
         showLocationDetails(building, title, building, photos || [], comments || 'No hay comentarios disponibles.', campus);
     });
-    marker.on('popupopen', () => {
-        const popupElement = marker._popup._container.querySelector('.leaflet-popup-content-wrapper');
-        if (popupElement) {
-            popupElement.style.cursor = 'pointer';
-            popupElement.addEventListener('click', (e) => {
-                e.stopPropagation();
-                flyToLocation(lat, lng, building, title, campus, true);
-                showLocationDetails(building, title, building, photos || [], comments || 'No hay comentarios disponibles.', campus);
-            }, { once: true });
-        }
-    });
+
     return marker;
 }
 
 function createInterestPinMarker(lat, lng, title, building, campus) {
     const pinUrl = '../../../image/pines/pin-usuario.svg';
+    
     const customIcon = L.divIcon({
         className: 'interest-pin',
         html: `
@@ -562,12 +522,14 @@ function createInterestPinMarker(lat, lng, title, building, campus) {
         iconAnchor: [16, 32],
         popupAnchor: [0, -32]
     });
+
     try {
         const marker = L.marker([lat, lng], {
             title: title,
             icon: customIcon,
             zIndexOffset: 1000
         }).bindPopup(`<b>Zona: ${title}</b><br><small>${building}</small>`).addTo(map);
+        
         marker.on('popupopen', () => {
             const popupElement = marker._popup._container.querySelector('.leaflet-popup-content-wrapper');
             if (popupElement) {
@@ -576,6 +538,7 @@ function createInterestPinMarker(lat, lng, title, building, campus) {
                 popupElement.classList.add('popup-animated');
             }
         });
+
         marker.on('popupclose', () => {
             if (marker._icon) {
                 marker._icon.classList.remove('marker-animated');
@@ -587,8 +550,10 @@ function createInterestPinMarker(lat, lng, title, building, campus) {
                 popupElement.classList.remove('popup-animated');
             }
         });
+
         return marker;
     } catch (error) {
+        console.log(`createInterestPinMarker: Error creating pin for ${title} in ${campus}:`, error);
         return null;
     }
 }
@@ -599,6 +564,7 @@ function toggleGeolocation() {
         geolocationActive = true;
         firstGeoUpdate = true;
         geolocationButton.classList.add('active');
+        geolocationButton.style.backgroundColor = '#1E90FF';
         if ("geolocation" in navigator) {
             geolocationWatchId = navigator.geolocation.watchPosition((position) => {
                 const { latitude, longitude, accuracy } = position.coords;
@@ -646,9 +612,10 @@ function toggleGeolocation() {
                                 }).addTo(osmMap);
                             }
                         })
-                        .catch(error => {});
+                        .catch(error => console.error('Error fetching route:', error));
                 }
             }, (error) => {
+                console.error('Error en geolocalización:', error);
                 alert('No se pudo obtener la ubicación. Asegúrate de permitir el acceso a la ubicación.');
                 toggleGeolocation();
             }, { enableHighAccuracy: true });
@@ -681,11 +648,16 @@ function toggleGeolocation() {
 }
 
 function flyToOSMLocation(lat, lng, campus) {
-    if (!osmMap) return;
+    if (!osmMap) {
+        console.log('flyToOSMLocation: OSM Map not initialized');
+        return;
+    }
+
     if (routeLayer) {
         osmMap.removeLayer(routeLayer);
         routeLayer = null;
     }
+
     if (geolocationActive && userMarker) {
         currentDestination = { lat: lat, lng: lng, campus: campus };
         const currentPos = userMarker.getLatLng();
@@ -703,10 +675,12 @@ function flyToOSMLocation(lat, lng, campus) {
                         duration: 1.5
                     });
                 } else {
+                    console.log('No route found');
                     osmMap.flyTo([lat, lng], 18, { duration: 1.5 });
                 }
             })
             .catch(error => {
+                console.error('Error fetching route:', error);
                 osmMap.flyTo([lat, lng], 18, { duration: 1.5 });
             });
     } else {
@@ -716,14 +690,17 @@ function flyToOSMLocation(lat, lng, campus) {
             noMoveStart: true
         });
     }
+
     const locationControls2 = document.getElementById('location-controls2');
     if (locationControls2) {
         locationControls2.classList.remove('visible');
     }
+
     const searchBox2 = document.getElementById('search-box2');
     if (searchBox2) {
         searchBox2.value = '';
     }
+
     const links = document.querySelectorAll('.osm-location-link');
     links.forEach(link => {
         link.style.display = 'block';
@@ -735,20 +712,43 @@ function showNotAvailablePopup(campus) {
     if (!popup) {
         popup = document.createElement('div');
         popup.id = 'not-available-popup';
+        popup.style.position = 'fixed';
+        popup.style.top = '50%';
+        popup.style.left = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+        popup.style.backgroundColor = 'white';
+        popup.style.padding = '20px';
+        popup.style.borderRadius = '10px';
+        popup.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+        popup.style.zIndex = '1000';
+        popup.style.textAlign = 'center';
         document.body.appendChild(popup);
     }
+
     popup.innerHTML = `
-        <span id="close-not-available">×</span>
+        <span id="close-not-available" style="position: absolute; top: 5px; right: 10px; cursor: pointer; font-size: 20px;">×</span>
         <h3>Lugar No Disponible</h3>
         <p>Por el momento, el ${campus} no está disponible. ¿Desea viajar al Campus Principal?</p>
-        <button id="accept-btn">Aceptar</button>
+        <button id="accept-btn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Aceptar</button>
     `;
+
     popup.style.display = 'block';
+
     const acceptBtn = document.getElementById('accept-btn');
+    acceptBtn.addEventListener('mouseenter', () => {
+        acceptBtn.style.backgroundColor = '#45a049';
+        acceptBtn.style.transform = 'scale(1.05)';
+        acceptBtn.style.transition = 'all 0.3s ease';
+    });
+    acceptBtn.addEventListener('mouseleave', () => {
+        acceptBtn.style.backgroundColor = '#4CAF50';
+        acceptBtn.style.transform = 'scale(1)';
+    });
     acceptBtn.addEventListener('click', () => {
         switchToCampus('Campus Principal');
         popup.style.display = 'none';
     });
+
     document.getElementById('close-not-available').addEventListener('click', () => {
         popup.style.display = 'none';
     });
@@ -759,42 +759,60 @@ function showCampusSelectionPopup() {
     if (!popup) {
         popup = document.createElement('div');
         popup.id = 'campus-selection-popup';
+        popup.style.position = 'fixed';
+        popup.style.top = '50%';
+        popup.style.left = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+        popup.style.backgroundColor = 'white';
+        popup.style.padding = '20px';
+        popup.style.borderRadius = '10px';
+        popup.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+        popup.style.zIndex = '1000';
+        popup.style.textAlign = 'center';
+        
         document.body.appendChild(popup);
     }
+
     popup.innerHTML = `
-        <span id="close-selection">×</span>
+        <span id="close-selection" style="position: absolute; top: 5px; right: 10px; cursor: pointer; font-size: 20px;">×</span>
         <h3>¿Quieres ir a algún lugar?</h3>
-        <div>
-            <button id="campus1-btn">Campus Principal</button>
-            <button id="campus2-btn" disabled>Campus 2</button>
-            <button id="campus3-btn" disabled>Campus 3</button>
-            <button id="sabancuy-btn" disabled>Campus Sabancuy</button>
-            <button id="jardin-btn" disabled>Jardin Botanico</button>
-            <button id="ccu-btn" disabled>Centro Cultural Universitario</button>
-            <button id="museo-btn" disabled>Museo Guanal</button>
+        <div style="margin: 10px;">
+            <button id="campus1-btn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">Campus Principal</button>
+            <button id="campus2-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Campus 2</button>
+            <button id="campus3-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Campus 3</button>
+            <button id="jardin-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Jardin Botanico</button>
+            <button id="ccu-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Centro Cultural Universitario</button>
+            <button id="museo-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Museo Guanal</button>
+            <button id="sabancuy-btn" style="background-color: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;" disabled>Campus Sabancuy</button>
         </div>
         <div id="action-buttons" style="display: none;">
-            <button id="accept-selection-btn">Aceptar</button>
-            <button id="cancel-btn">Cancelar</button>
+            <button id="accept-selection-btn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">Aceptar</button>
+            <button id="cancel-btn" style="background-color: #f44336; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">Cancelar</button>
         </div>
     `;
+
     popup.style.display = 'block';
+
     const campus1Btn = document.getElementById('campus1-btn');
     const actionButtons = document.getElementById('action-buttons');
     const acceptBtn = document.getElementById('accept-selection-btn');
     const cancelBtn = document.getElementById('cancel-btn');
     const closeBtn = document.getElementById('close-selection');
+let currentMenu = null;
     campus1Btn.addEventListener('click', () => {
         actionButtons.style.display = 'block';
     });
+
     acceptBtn.addEventListener('click', () => {
         switchToCampus('Campus Principal');
         popup.style.display = 'none';
     });
+
     cancelBtn.addEventListener('click', () => {
         osmMap.setZoom(osmMap.getZoom() - 3);
         popup.style.display = 'none';
     });
+
     closeBtn.addEventListener('click', () => {
         osmMap.setZoom(osmMap.getZoom() - 3);
         popup.style.display = 'none';
@@ -804,6 +822,7 @@ function showCampusSelectionPopup() {
 function updateInterestPoints(campus) {
     interestMarkers[campus].forEach(marker => map.removeLayer(marker));
     interestMarkers[campus] = [];
+
     if (interestPointsActive[campus] && interestPoints[campus]) {
         interestPoints[campus].forEach(point => {
             const marker = createInterestPointMarker(
@@ -848,26 +867,11 @@ function updateLocationControls() {
         }
     });
 }
-const campusColors = {
-    /*
-    'Campus Principal': 'blue',
-    'Campus 2': 'green',
-    'Campus 3': 'red',
-    'Jardin Botanico': 'purple',
-    'Centro Cultural Universitario': 'orange',
-    'Museo Guanal': 'yellow',
-    'Campus Sabancuy': 'cyan'*/
-    'Campus Principal': 'yellow',
-    'Campus 2': 'yellow',
-    'Campus 3': 'yellow',
-    'Jardin Botanico': 'green',
-    'Centro Cultural Universitario': 'orange',
-    'Museo Guanal': 'gris',
-    'Campus Sabancuy': 'yellow'
-};
+
 function updateOSMLocationControls() {
     const locationControls2 = document.getElementById('location-controls2');
     if (!locationControls2) return;
+
     let controlsHTML = `
         <div id="search-container2">
             <input type="text" 
@@ -877,19 +881,21 @@ function updateOSMLocationControls() {
         </div>
         <div class="campus-section">
             <h2>Lugares</h2>`;
+
     Object.keys(osmMap.campusMarkers).forEach(campus => {
         const marker = osmMap.campusMarkers[campus];
         const [lat, lng] = [marker.getLatLng().lat, marker.getLatLng().lng];
-        const colorClass = `marker-${campusColors[campus]}`; // Obtener la clase de color del campus
         controlsHTML += `
-            <a href="#" class="osm-location-link ${colorClass}" 
+            <a href="#" class="osm-location-link" 
                onclick="flyToOSMLocation(${lat}, ${lng}, '${campus}')"
                data-search="${campus.toLowerCase()}">
                 ${campus}
             </a>`;
     });
+
     controlsHTML += '</div>';
     locationControls2.innerHTML = controlsHTML;
+
     const searchBox2 = document.getElementById('search-box2');
     if (searchBox2) {
         searchBox2.addEventListener('input', function(e) {
@@ -910,17 +916,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const pantallaBienvenida = document.getElementById('pantallaBienvenida');
     const guiaContainer = document.getElementById('guia-container');
     const guiaContainer2 = document.getElementById('guia-container2');
-    if (!mapElement) return;
+
+    if (!mapElement) {
+        console.error('DOMContentLoaded: #map element not found');
+        return;
+    }
+
+    if (!osmMapElement) {
+        console.warn('DOMContentLoaded: #osm-map element not found, OpenStreetMap will not be available at minimum zoom');
+    }
+
+    // Mapa SVG (inicializado con Campus Principal)
     map = L.map('map', {
         crs: L.CRS.Simple,
         minZoom: -1.5,
-        maxZoom: 4,
+        maxZoom: 2,
         maxBoundsViscosity: 1.0,
         zoomDelta: 0.3,
         zoomSnap: 0,
         fadeAnimation: true,
         zoomAnimationThreshold: 2
     });
+
+    // Configurar capas para cada campus
     Object.keys(campuses).forEach(campus => {
         const { w, h, svg } = campuses[campus];
         const bounds = [[0, 0], [h, w]];
@@ -970,13 +988,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         markersLayers[campus] = L.layerGroup();
+
         fetch(campuses[campus].geojson)
             .then(response => response.json())
             .then(data => {
                 detailedLayers[campus].addData(data);
             })
-            .catch(error => {});
+            .catch(error => console.error(`Error loading GeoJSON for ${campus}:`, error));
     });
+
+    // Inicializar con Campus Principal
     const { w, h, center, zoom } = campuses['Campus Principal'];
     const bounds = [[0, 0], [h, w]];
     baseLayers['Campus Principal'].on('load', () => {
@@ -987,6 +1008,8 @@ document.addEventListener('DOMContentLoaded', function() {
     map.setMaxBounds(bounds);
     map.fitBounds(bounds);
     map.setView(center, zoom);
+
+    // Mapa de OpenStreetMap
     if (osmMapElement) {
         osmMap = L.map('osm-map', {
             crs: L.CRS.EPSG3857,
@@ -995,101 +1018,93 @@ document.addEventListener('DOMContentLoaded', function() {
             zoomDelta: 0.3,
             zoomSnap: 0
         }).setView([18.646626696426264, -91.81813061518552], 18);
+
         osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 21,
             maxNativeZoom: 19
         });
-        const campusIcons = {
-            'Campus Principal': '../../../image/locations/CP/pines/pin-cp.svg',
-            'Campus 2': '../../../image/locations/CP/pines/pin-cp.svg',
-            'Campus 3': '../../../image/locations/CP/pines/pin-cp.svg',
-            'Campus Sabancuy': '../../../image/locations/CP/pines/pin-cp.svg',
-            'Jardin Botanico': '../../../image/locations/CP/pines/pin-jb.svg',
-            'Centro Cultural Universitario': '../../../image/locations/CP/pines/pin-ccu.svg',
-            'Museo Guanal': '../../../image/locations/CP/pines/pin-mg.svg'
-            
-        };
         osmMap.campusMarkers = {
             'Campus Principal': L.marker([18.646626696426264, -91.81813061518552], {
-                title: 'UNACAR',
-                icon: L.icon({
-                    iconUrl: campusIcons['Campus Principal'],
-                    iconSize: [64, 64],
-                    iconAnchor: [32, 64]
-                })
-            }),
+                title: 'UNACAR'
+            }).bindPopup(`
+                <b>UNACAR Universidad</b><br>
+                <small>Universidad Autónoma del Carmen</small><br>
+                Campus Principal, Ciudad del Carmen
+            `, { autoClose: false, closeOnClick: false }),
             'Campus 2': L.marker([18.653975735270432, -91.81062427253869], {
-                title: 'UNACAR Preparatoria',
-                icon: L.icon({
-                    iconUrl: campusIcons['Campus 2'],
-                    iconSize: [64, 64],
-                    iconAnchor: [32, 64]
-                })
-            }),
+                title: 'UNACAR Preparatoria'
+            }).bindPopup(`
+                <b>UNACAR Preparatoria</b><br>
+                <small>Universidad Autónoma del Carmen</small><br>
+                Campus 2, Ciudad del Carmen
+            `, { autoClose: false, closeOnClick: false }),
             'Campus 3': L.marker([18.65757697187412, -91.76605622956039], {
-                title: 'UNACAR',
-                icon: L.icon({
-                    iconUrl: campusIcons['Campus 3'],
-                    iconSize: [64, 64],
-                    iconAnchor: [32, 64]
-                })
-            }),
-            'Campus Sabancuy': L.marker([18.9694735975256, -91.18848920523213], {
-                title: 'UNACAR',
-                icon: L.icon({
-                    iconUrl: campusIcons['Campus Sabancuy'],
-                    iconSize: [64, 64],
-                    iconAnchor: [32, 64]
-                })
-            }),
+                title: 'UNACAR'
+            }).bindPopup(`
+                <b>UNACAR Universidad</b><br>
+                <small>Universidad Autónoma del Carmen</small><br>
+                Campus 3, Ciudad del Carmen
+            `, { autoClose: false, closeOnClick: false }),
             'Jardin Botanico': L.marker([18.636835943623314, -91.779242388015359], {
-                title: 'UNACAR',
-                icon: L.icon({
-                    iconUrl: campusIcons['Jardin Botanico'],
-                    iconSize: [64, 64],
-                    iconAnchor: [32, 64]
-                })
-            }),
+                title: 'UNACAR'
+            }).bindPopup(`
+                <b>Jardin Botanico</b><br>
+                <small>Universidad Autónoma del Carmen</small><br>
+                Facultad de Ciencias Naturales, Ciudad del Carmen
+            `, { autoClose: false, closeOnClick: false }),
             'Centro Cultural Universitario': L.marker([18.638626189564732, -91.83462499633609], {
-                title: 'UNACAR',
-                icon: L.icon({
-                    iconUrl: campusIcons['Centro Cultural Universitario'],
-                    iconSize: [64, 64],
-                    iconAnchor: [32, 64]
-                })
-            }),
+                title: 'UNACAR'
+            }).bindPopup(`
+                <b>Centro Cultural Universitario</b><br>
+                <small>Universidad Autónoma del Carmen</small><br>
+                CCU, Ciudad del Carmen
+            `, { autoClose: false, closeOnClick: false }),
             'Museo Guanal': L.marker([18.633442367616624, -91.83217897408228], {
-                title: 'UNACAR',
-                icon: L.icon({
-                    iconUrl: campusIcons['Museo Guanal'],
-                    iconSize: [64, 64],
-                    iconAnchor: [32, 64]
-                })
-            }),
-            
+                title: 'UNACAR'
+            }).bindPopup(`
+                <b>Museo Guanal</b><br>
+                <small>Universidad Autónoma del Carmen</small><br>
+                Museo Universitario de Ciencias y Artes, Ciudad del Carmen
+            `, { autoClose: false, closeOnClick: false }),
+            'Campus Sabancuy': L.marker([18.9694735975256, -91.18848920523213], {
+                title: 'UNACAR'
+            }).bindPopup(`
+                <b>UNACAR Preparatoria</b><br>
+                <small>Universidad Autónoma del Carmen</small><br>
+                Campus Sabancuy, Ciudad del Carmen
+            `, { autoClose: false, closeOnClick: false }),
         };
+
         Object.entries(osmMap.campusMarkers).forEach(([campus, marker]) => {
-            marker.addTo(osmMap);
+            marker.addTo(osmMap).openPopup();
+            marker.on('popupclose', () => {
+                marker.openPopup();
+            });
             marker.on('click', () => {
+                const campusData = campuses[campus];
                 flyToOSMLocation(marker.getLatLng().lat, marker.getLatLng().lng, campus);
                 showOSMLocationDetails(
                     campus,
                     campus,
                     'UNACAR',
-                    campuses[campus].photos || [],
-                    campuses[campus].description || 'No hay descripción disponible.',
+                    campusData.photos || [],
+                    campusData.description || 'No hay descripción disponible.',
                     campus,
                     true
                 );
             });
         });
+
         osmMapElement.style.display = 'none';
     }
+
+    // Alternar capas según el zoom
     const thresholdZoom = 0.5;
     const intermediateZoomThreshold = -0.5;
     const minZoom = -1.5;
     let isOSMVisible = false;
+
     function getClosestCampus() {
         const center = osmMap.getCenter();
         let closestCampus = null;
@@ -1103,6 +1118,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         return closestCampus;
     }
+
     function getVisibleCampus() {
         const bounds = osmMap.getBounds();
         let visibleCampuses = [];
@@ -1127,12 +1143,16 @@ document.addEventListener('DOMContentLoaded', function() {
             return currentCampus;
         }
     }
+
     function handleMapTransition(currentZoom, fromOSM = false) {
+        console.log('Handle transition - Zoom level:', currentZoom, 'OSM visible:', isOSMVisible, 'From OSM:', fromOSM, 'Current Campus:', currentCampus);
+
         const guiaContainer = document.getElementById('guia-container');
         const guiaContainer2 = document.getElementById('guia-container2');
-        const hasFloorOverlay = !!currentFloorOverlay;
+
         if (currentZoom === minZoom && osmMap && osmMapElement && !fromOSM) {
             if (!isOSMVisible) {
+                console.log('Mostrando mapa de OpenStreetMap');
                 isOSMVisible = true;
                 mapElement.style.display = 'none';
                 osmMapElement.style.display = 'block';
@@ -1140,6 +1160,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 osmMap.addLayer(osmLayer);
                 Object.values(osmMap.campusMarkers).forEach(marker => {
                     osmMap.addLayer(marker);
+                    marker.openPopup();
                 });
                 ignoreNextZoomEnd = true;
                 osmMap.setView(osmMap.campusMarkers[currentCampus].getLatLng(), 18);
@@ -1149,25 +1170,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     guiaContainer2.style.display = 'block';
                     updateOSMLocationControls();
                 }
-                if (currentFloorOverlay) {
-                    map.removeLayer(currentFloorOverlay);
-                    currentFloorOverlay = null;
-                }
-                if (levelMenu) {
-                    document.body.removeChild(levelMenu);
-                    levelMenu = null;
-                }
-                if (buildingMarker && buildingMarker._icon) {
-                    buildingMarker._icon.style.display = '';
-                }
-                buildingMarker = null;
             }
         } else if ((currentZoom > minZoom || fromOSM) && isOSMVisible) {
+            console.log('Ocultando OpenStreetMap y mostrando mapa SVG de', currentCampus);
             isOSMVisible = false;
             mapElement.style.display = 'block';
             osmMapElement.style.display = 'none';
             osmMap.removeLayer(osmLayer);
             Object.values(osmMap.campusMarkers).forEach(marker => osmMap.removeLayer(marker));
+
             if (fromOSM) {
                 const osmZoom = osmMap.getZoom();
                 let svgZoom;
@@ -1188,84 +1199,78 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (guiaContainer2) guiaContainer2.style.display = 'none';
                 return;
             }
+
             if (currentZoom >= thresholdZoom) {
+                console.log('Mostrando capa detallada de', currentCampus);
                 map.eachLayer(layer => map.removeLayer(layer));
                 map.addLayer(detailedBaseLayers[currentCampus]);
                 map.addLayer(detailedLayers[currentCampus]);
-                if (!currentFloorOverlay) {
-                    map.addLayer(markersLayers[currentCampus]);
-                }
+                map.addLayer(markersLayers[currentCampus]);
             } else if (currentZoom > intermediateZoomThreshold) {
+                console.log('Mostrando capa base de', currentCampus);
                 map.eachLayer(layer => map.removeLayer(layer));
                 map.addLayer(baseLayers[currentCampus]);
-                if (!currentFloorOverlay) {
-                    map.addLayer(markersLayers[currentCampus]);
-                }
+                map.addLayer(markersLayers[currentCampus]);
             } else {
+                console.log('Mostrando capa intermedia de', currentCampus);
                 map.eachLayer(layer => map.removeLayer(layer));
                 map.addLayer(intermediateBaseLayers[currentCampus]);
-                if (!currentFloorOverlay) {
-                    map.addLayer(markersLayers[currentCampus]);
-                }
+                map.addLayer(markersLayers[currentCampus]);
             }
             if (guiaContainer) guiaContainer.style.display = 'block';
             if (guiaContainer2) guiaContainer2.style.display = 'none';
         } else if (!isOSMVisible && !fromOSM) {
             if (currentZoom >= thresholdZoom) {
+                console.log('Mostrando capa detallada y base detallada de', currentCampus);
                 mapElement.style.display = 'block';
                 if (osmMapElement) osmMapElement.style.display = 'none';
                 map.eachLayer(layer => map.removeLayer(layer));
                 map.addLayer(detailedBaseLayers[currentCampus]);
                 map.addLayer(detailedLayers[currentCampus]);
-                if (!currentFloorOverlay) {
-                    map.addLayer(markersLayers[currentCampus]);
-                }
+                map.addLayer(markersLayers[currentCampus]);
             } else if (currentZoom > intermediateZoomThreshold) {
+                console.log('Mostrando capa base de', currentCampus);
                 mapElement.style.display = 'block';
                 if (osmMapElement) osmMapElement.style.display = 'none';
                 map.eachLayer(layer => map.removeLayer(layer));
                 map.addLayer(baseLayers[currentCampus]);
-                if (!currentFloorOverlay) {
-                    map.addLayer(markersLayers[currentCampus]);
-                }
+                map.addLayer(markersLayers[currentCampus]);
             } else {
+                console.log('Mostrando capa intermedia de', currentCampus);
                 mapElement.style.display = 'block';
                 if (osmMapElement) osmMapElement.style.display = 'none';
                 map.eachLayer(layer => map.removeLayer(layer));
                 map.addLayer(intermediateBaseLayers[currentCampus]);
-                if (!currentFloorOverlay) {
-                    map.addLayer(markersLayers[currentCampus]);
-                }
+                map.addLayer(markersLayers[currentCampus]);
             }
             if (guiaContainer) guiaContainer.style.display = 'block';
             if (guiaContainer2) guiaContainer2.style.display = 'none';
         }
-        if (hasFloorOverlay && currentFloorOverlay) {
-            currentFloorOverlay.addTo(map);
-        }
-        if (buildingMarker && buildingMarker._icon && !currentFloorOverlay) {
-            buildingMarker._icon.style.display = '';
-            buildingMarker = null;
-        }
+
         updateInterestPoints(currentCampus);
     }
+
     map.on('zoomstart', () => {
         Object.values(markers[currentCampus]).flat().forEach(m => {
             if (m._icon) m._icon.classList.remove('marker-animated');
         });
+
         const svgElement = document.querySelector('.leaflet-overlay-pane svg');
         if (svgElement) {
             svgElement.classList.add('will-change-transform');
         }
+
         const markerElements = document.querySelectorAll('.leaflet-marker-pane .marker-inner');
         markerElements.forEach(marker => {
             marker.classList.add('will-change-transform');
         });
     });
+
     map.on('zoomend moveend', () => {
         const currentZoom = map.getZoom();
         handleMapTransition(currentZoom, false);
     });
+
     if (osmMap) {
         osmMap.on('zoomend', () => {
             if (isOSMVisible) {
@@ -1274,16 +1279,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 const osmZoom = osmMap.getZoom();
+                console.log('OSM Zoom changed to:', osmZoom);
                 if (osmZoom >= 20) {
                     showCampusSelectionPopup();
+                }
+                else {
+                    popup.style.display = 'none';
                 }
             }
         });
     }
+
     L.Control.CustomZoomVector = L.Control.Zoom.extend({
         onAdd: function(map) {
             const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
             const zoomDelta = 0.3;
+
             const interest = L.DomUtil.create('a', 'leaflet-control-interest', container);
             interest.innerHTML = '<i class="fas fa-person"></i>';
             interest.href = '#';
@@ -1293,6 +1304,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 L.DomEvent.stopPropagation(e);
                 toggleInterestPoints(currentCampus);
             });
+
             this._zoomInButton = this._createButton(
                 '+', '+ Zoom', 'leaflet-control-zoom-in', container,
                 function(e) {
@@ -1303,6 +1315,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             );
+
             this._zoomOutButton = this._createButton(
                 '−', '- Zoom', 'leaflet-control-zoom-out', container,
                 function(e) {
@@ -1313,25 +1326,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             );
+
             this._updateDisabled();
             map.on('zoomend zoomlevelschange', this._updateDisabled, this);
+
             return container;
         },
+
         _createButton: function(html, title, className, container, fn) {
             const link = L.DomUtil.create('a', className, container);
             link.innerHTML = html;
             link.href = '#';
             link.title = title;
+
             L.DomEvent.on(link, 'mousedown dblclick', L.DomEvent.stopPropagation)
                 .on(link, 'click', L.DomEvent.stop)
                 .on(link, 'click', fn, this);
+
             return link;
         },
+
         _updateDisabled: function() {
             const map = this._map;
             const className = 'leaflet-disabled';
+
             L.DomUtil.removeClass(this._zoomInButton, className);
             L.DomUtil.removeClass(this._zoomOutButton, className);
+
             if (map._zoom >= map.getMaxZoom()) {
                 L.DomUtil.addClass(this._zoomInButton, className);
             }
@@ -1340,13 +1361,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
     map.removeControl(map.zoomControl);
     map.addControl(new L.Control.CustomZoomVector({ position: 'topleft' }));
+
     if (osmMap) {
         L.Control.CustomZoomOSM = L.Control.Zoom.extend({
             onAdd: function(map) {
                 const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
                 const zoomDelta = 0.3;
+
                 const geolocation = L.DomUtil.create('a', 'leaflet-control-geolocation', container);
                 geolocation.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
                 geolocation.href = '#';
@@ -1356,6 +1380,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     L.DomEvent.stopPropagation(e);
                     toggleGeolocation();
                 });
+
                 this._zoomInButton = this._createButton(
                     '+', '+ Zoom', 'leaflet-control-zoom-in', container,
                     function(e) {
@@ -1364,6 +1389,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         osmMap.setZoom(osmMap.getZoom() + zoomDelta);
                     }
                 );
+
                 this._zoomOutButton = this._createButton(
                     '−', '- Zoom', 'leaflet-control-zoom-out', container,
                     function(e) {
@@ -1372,25 +1398,33 @@ document.addEventListener('DOMContentLoaded', function() {
                         osmMap.setZoom(osmMap.getZoom() - zoomDelta);
                     }
                 );
+
                 this._updateDisabled();
                 map.on('zoomend zoomlevelschange', this._updateDisabled, this);
+
                 return container;
             },
+
             _createButton: function(html, title, className, container, fn) {
                 const link = L.DomUtil.create('a', className, container);
                 link.innerHTML = html;
                 link.href = '#';
                 link.title = title;
+
                 L.DomEvent.on(link, 'mousedown dblclick', L.DomEvent.stopPropagation)
                     .on(link, 'click', L.DomEvent.stop)
                     .on(link, 'click', fn, this);
+
                 return link;
             },
+
             _updateDisabled: function() {
                 const map = this._map;
                 const className = 'leaflet-disabled';
+
                 L.DomUtil.removeClass(this._zoomInButton, className);
                 L.DomUtil.removeClass(this._zoomOutButton, className);
+
                 if (map._zoom >= map.getMaxZoom()) {
                     L.DomUtil.addClass(this._zoomInButton, className);
                 }
@@ -1399,9 +1433,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+
         osmMap.removeControl(osmMap.zoomControl);
         osmMap.addControl(new L.Control.CustomZoomOSM({ position: 'topleft' }));
     }
+
     function createMarker(lat, lng, title, building, iconConfig, faculty, photos, comments, campus, isShared = false) {
         const customIcon = L.divIcon({
             className: `marker-${iconConfig.color}`,
@@ -1419,42 +1455,39 @@ document.addEventListener('DOMContentLoaded', function() {
             iconAnchor: [16, 32],
             popupAnchor: [0, -32]
         });
+
         const popupContent = isShared
             ? `<b>${building}</b><br><small>${locations[campus][building].places.map(p => p.name).join(', ')}</small>`
             : `<b>Edificio: ${title}</b><br><small>${building}</small>`;
+
         const marker = L.marker([lat, lng], {
             title: isShared ? building : title,
             icon: customIcon
         }).bindPopup(popupContent);
+
         marker.on('click', () => {
+            console.log(`marcador ${title} (de: ${building}) en [${lat}, ${lng}] en ${campus}`);
             flyToLocation(lat, lng, building, isShared ? building : title, campus);
-            showLocationDetails(
-                building,
-                isShared ? building : title,
-                faculty,
-                photos || [],
-                isShared ? 'Múltiples edificios: ' + locations[campus][building].places.map(p => p.name).join(', ') : (comments || 'No hay comentarios disponibles.'),
-                campus
-            );
         });
+
         marker.on('popupopen', () => {
             const popupElement = marker._popup._container.querySelector('.leaflet-popup-content-wrapper');
             if (popupElement) {
                 popupElement.style.cursor = 'pointer';
                 popupElement.addEventListener('click', (e) => {
+                    console.log(`Popup clicked for ${title} (building: ${building}) in ${campus}`);
                     e.stopPropagation();
-                    flyToLocation(lat, lng, building, isShared ? building : title, campus);
-                    showLocationDetails(
-                        building,
-                        isShared ? building : title,
-                        faculty,
-                        photos || [],
-                        isShared ? 'Múltiples edificios: ' + locations[campus][building].places.map(p => p.name).join(', ') : (comments || 'No hay comentarios disponibles.'),
-                        campus
-                    );
+                    if (isShared) {
+                        showLocationDetails(building, building, faculty, [], 'Múltiples edificios: ' + locations[campus][building].places.map(p => p.name).join(', '), campus);
+                    } else {
+                        showLocationDetails(building, title, faculty, photos || [], comments || 'No hay comentarios disponibles.', campus);
+                    }
                 }, { once: true });
+            } else {
+                console.log(`Popup opened for ${title}, but .leaflet-popup-content-wrapper not found`);
             }
         });
+
         marker.on('popupclose', function() {
             if (marker._icon) {
                 marker._icon.classList.remove('marker-animated');
@@ -1464,15 +1497,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 popupElement.classList.remove('popup-animated');
             }
         });
+
         if (!markers[campus][building]) markers[campus][building] = [];
         markers[campus][building].push(marker);
         markersLayers[campus].addLayer(marker);
         return marker;
     }
+
     const infoIcon = document.querySelector('.palpitante3 .fa-magnifying-glass');
     const locationControls = document.getElementById('location-controls');
     const infoIcon2 = document.querySelector('.palpitante5 .fa-magnifying-glass');
     const locationControls2 = document.getElementById('location-controls2');
+
     if (infoIcon && locationControls) {
         infoIcon.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1490,6 +1526,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
     if (infoIcon2 && locationControls2) {
         infoIcon2.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1505,6 +1542,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
     document.addEventListener('click', (e) => {
         if (locationControls && !locationControls.contains(e.target) && infoIcon && !infoIcon.contains(e.target)) {
             locationControls.classList.remove('visible');
@@ -1527,6 +1565,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+
     const imageUrls = [
         ...Object.keys(locations).flatMap(campus =>
             Object.values(locations[campus]).map(data => data.icon ? data.icon.iconUrl : '')
@@ -1551,6 +1590,7 @@ document.addEventListener('DOMContentLoaded', function() {
         '../image/pines/pin-usuario.svg'
     ].filter(url => url);
     preloadImages(imageUrls);
+
     let controlsHTML = `
         <div id="search-container">
             <input type="text" 
@@ -1558,6 +1598,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 placeholder="Buscar aula o edificio..."
                 autocomplete="off">
         </div>`;
+    
     for (const campus of Object.keys(locations)) {
         controlsHTML += `<div class="building-section" data-campus="${campus}"><h2>${campus}</h2>`;
         for (const [building, data] of Object.entries(locations[campus])) {
@@ -1590,10 +1631,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         controlsHTML += '</div>';
     }
+    
     if (locationControls) {
         locationControls.innerHTML = controlsHTML;
         updateLocationControls();
     }
+
     const searchBox = document.getElementById('search-box');
     if (searchBox) {
         searchBox.addEventListener('input', function(e) {
@@ -1605,10 +1648,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     fillOpacity: buildingName.includes(searchTerm) ? 0.7 : 0.3
                 });
             });
+            
             links.forEach(link => {
                 const searchableText = link.dataset.search;
                 const match = searchableText.includes(searchTerm);
                 link.style.display = match ? 'block' : 'none';
+                
                 const section = link.closest('.building-section');
                 if (section) {
                     const visibleLinks = section.querySelectorAll('.location-link[style*="display: block"]');
@@ -1617,6 +1662,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
     map.on('load', function() {
         const pantallaBienvenida = document.getElementById('pantallaBienvenida');
         const contenido = document.getElementById('contenido');
@@ -1625,6 +1671,7 @@ document.addEventListener('DOMContentLoaded', function() {
             contenido.style.display = 'block';
         }
     });
+
     window.flyToLocation = flyToLocation;
     window.flyToOSMLocation = flyToOSMLocation;
 });

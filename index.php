@@ -102,7 +102,11 @@ if (!empty($_SESSION)) {
         <div class="menu-container" id="menu-container"> 
             <div class="aboutme menu-option">
                 <a class="btn" data-key="opccalendario" href="html/bots.html">Bots</a>
-            </div>          
+            </div> 
+            <!--
+            <div class="aboutme menu-option">
+                <a class="btn" data-key="opccalendario" href="diagramas.html">Bots</a>
+            </div>          -->
             <div class="aboutme menu-option">
                 <a class="btn" data-key="opccalendario" href="html/calendario.html">Calendario Escolar</a>
             </div>

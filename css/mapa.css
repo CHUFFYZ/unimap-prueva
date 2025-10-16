@@ -326,7 +326,8 @@ p {
 /*fin usuario menu-------------------------------------------------------------------------------------------------*/
 
 /*contenedores de opciones del menu----------*/
-.container2,
+
+/*.container2,
 .container3,
 .aboutme {
     min-width: 10px;
@@ -343,9 +344,12 @@ p {
     border: 2.5px solid #ccc;
     cursor: pointer;
     flex-shrink: 0;
-    transition: filter 0.3s ease; /* Transición suave para iluminación */
+    transition: filter 0.3s ease; /* Transición suave para iluminación *//*
+}*/
+.container3{
+    padding: 0px !important;
+    height: 40px;
 }
-
 .container3 a {/*palabra facebook*/
     display: flex;
     align-items: center;
@@ -353,38 +357,9 @@ p {
 }
 
 .container3 i {/*icono facebook*/
-    font-size: 24px;
     transform: scale(1.4);
-    transition: transform 0.3s;
 }
 
-/*fin contenedores de opcionesd el menu*/
-/*estilos para los botones------------------*/
-
-a.btn:hover, .container3 .fab:hover {
-    animation: cambioColor 2s forwards;
-    font-size: 16px;
-}
-
-@keyframes cambioColor {
-    0% { color: #75a63c; }
-    100% { color: #fbff00; }
-}
-
-a.btn, .container3 .fab {
-    background-color: transparent;
-    padding: 5px;
-    color: #ffffff;
-    text-decoration: none;
-    border: none;
-    /*----------------------*/
-    text-transform: uppercase;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.8;
-    margin-top: 2px;
-    transition: font-size 0.3s ease;
-}
 
 /*fin de estilos para los botones*/
 /*menu----------------------------------------*/
@@ -403,6 +378,10 @@ a.btn, .container3 .fab {
     flex-direction: row;
     padding: 5px; /* Ajusta este valor según necesites */
     box-sizing: border-box; /* Esto hace que el padding no aumente el tamaño total */
+    padding: 5px 0px 5px 0px;
+}
+.aboutme{
+    margin-right: 5px;  
 }
 /*fin menu*/
 /*activar el boton cuanto cumpla este requisito-------------*/
@@ -425,22 +404,26 @@ a.btn, .container3 .fab {
     display: flex;
     position: fixed; /* Cambiado de absolute a fixed */
     right: 5px;
-    bottom: env(safe-area-inset-bottom); /* Considera áreas seguras en móviles */
+    top: env(safe-area-inset-bottom); /* Considera áreas seguras en móviles */
     border-radius: 20px;
     flex-direction: column;
     z-index: 3;
     background-color: #8d8d8d75;
     backdrop-filter: blur(5px); 
-    height: calc(100% - 88px);
-    max-height: 260px; /* Usa porcentaje en lugar de vh */
+    height: auto;
+    max-height: calc(100% - 85px); /* Usa porcentaje en lugar de vh */
     width: auto;
     min-width: 200px;
     max-width: 90vw; /* Limita el ancho máximo */
     overflow-y: auto;
     box-sizing: border-box;
+    gap: 8px;
 }
 
-@media only screen and (max-width: 880px) {
+@media only screen and (max-width: 944px) {
+    .aboutme{
+        margin-right: 0px;  
+    }
     .supercontainer { 
     justify-content: space-between;
     height: 50px;
@@ -457,17 +440,10 @@ a.btn, .container3 .fab {
         align-items: center;
         justify-content: center; 
     }
-
-    
     .menu-container {
         display: none;
         flex-direction: column;
-    }
-
-    .container2,
-    .container3,
-    .aboutme {
-        display: none;
+        
     }
     .usuario{
     width: 40px;
@@ -479,6 +455,7 @@ a.btn, .container3 .fab {
     }
     .menu-container.active {
         top: 60px; /* Reduced spacing for mobile */
+        padding: 5px 5px 5px 5px;
     }
 }
 /*---------------------------------*/
@@ -1250,7 +1227,7 @@ tr:nth-child(even) td {
 #location-details h2 {
     color: #0040c9;
     font-size: 1.3em;
-    margin-bottom: 10px;
+    margin-bottom:10px;
 }
 #location-details2 h2 {
     color: #0040c9;
@@ -1628,27 +1605,13 @@ border-bottom: 0px solid black !important;
 
 /*inicio responsive----------------------------------------------------------------------------------------------------*/
 @media (max-width: 880px) {
-    .container2,
-    .container3,
-    .aboutme {
-        width: auto;
-        flex-direction: column;
-        flex-shrink: 0;
-    }
 
-    .menu-container.active .container2,
-    .menu-container.active .container3,
-    .menu-container.active .aboutme {
+    .menu-container.active{
         display: flex;
     }
     .menu-usuario.active{
         top: 60px;
         max-height: calc(100% - 85px );
-    }
-   
-    .menu-container.active {
-        height: calc(100% - 85px );
-
     }
     /*-------------------------------*/
     #location-controls {
@@ -1886,6 +1849,9 @@ border-bottom: 0px solid black !important;
     .supercontainer {
         height: 45px;
     }
+    .menu-container.active{
+        top: 55px;
+    }
     .inisesion{
     top: 90px;
     }
@@ -1908,8 +1874,14 @@ border-bottom: 0px solid black !important;
         font-size: 13px;
         text-align: center;
     }
+    .menu-container.active{
+        top: 55px;
+    }
 }
 @media only screen and (max-width: 480px) {
+    .menu-container.active{
+        top: 55px;
+    }
     table {
         min-width: 0;
         font-size: 14px;
@@ -2077,3 +2049,75 @@ border-bottom: 0px solid black !important;
     z-index: 10;
     display: none; /* Inicialmente oculto */
 }
+
+#campus-selection-popup {
+    width: calc(100% - 15px);
+    max-Width: 300px;
+    height: calc(100% - 60px);
+    max-Height: 490px;
+    overflow-y: auto;
+    
+}
+/*---Capas por nivel----------------*/
+.explore-levels{
+    position: relative;
+    font-size: .8rem;
+    line-height: .16rem;
+    /*color: hsla(0, 0%, 100%, .65);*/
+    color: hsl(0, 0%, 100%);
+    padding: .5rem 1rem;
+    border: 1px solid #586172;
+    background-color: #4a5366;
+    border-radius: 50px;
+    width: -webkit-fit-content;
+    width: fit-content;
+    width: -moz-fit-content;
+    overflow: hidden;
+    cursor: pointer;
+    margin-right: 5px;
+}
+.explore-levels:hover {
+text-decoration: underline;
+}
+.rute{
+    display: none;
+    position: relative;
+    font-size: .8rem;
+    line-height: .16rem;
+    /*color: hsla(0, 0%, 100%, .65);*/
+    color: hsl(0, 0%, 100%);
+    padding: .5rem 1rem;
+    border: 1px solid #586172;
+    background-color: #4a5366;
+    border-radius: 50px;
+    width: -webkit-fit-content;
+    width: fit-content;
+    width: -moz-fit-content;
+    overflow: hidden;
+    cursor: pointer;
+    
+}
+.rute:hover {
+text-decoration: underline;
+}
+#level-menu button {
+width: 100%;
+border: 1px solid #ddd;
+border-radius: 3px;
+}
+#level-menu button:hover {
+background-color: #f0f0f0;
+}
+.close-levels:hover {
+background-color: #d32f2f !important;
+}
+
+/*-------------------*/
+.top{
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+

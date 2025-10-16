@@ -49,6 +49,7 @@ ob_end_flush();
     <link rel="shortcut icon" href="../../../image/iconos/logo/LogoBlanco1.svg">
     <link rel="stylesheet" href="../../../css/mapa.css">
     <link rel="stylesheet" href="../../../css/global.css">
+    <link rel="stylesheet" href="../../../css/niveles-piso.css">
 </head>
 <body>
     <div class="pantalla-bienvenida" id="pantallaBienvenida">
