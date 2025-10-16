@@ -915,6 +915,7 @@ document.addEventListener('DOMContentLoaded', function() {
         crs: L.CRS.Simple,
         minZoom: -1.5,
         maxZoom: 4,
+        /*lol*/
         maxBoundsViscosity: 1.0,
         zoomDelta: 0.3,
         zoomSnap: 0,
