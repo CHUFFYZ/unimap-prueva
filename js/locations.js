@@ -18,7 +18,7 @@ h: 1521,
 svg: '../../../image/locations/mapa/campus2.svg',
 geojson: '../../../data/campus2_buildings.json',
 center: [700, 1200], // [lat, lng]
-zoom: -4, // Zoom inicial
+zoom: 0, // Zoom inicial
 description: 'cetis el mejor',
 photos: [
 { url: '../../../image/locations/CP/galeria/campus/1.webp', isPanoramic: false },
@@ -31,7 +31,7 @@ h: 1521,
 svg: '../../../image/locations/mapa/campus2.svg',
 geojson: '../../../data/campus2_buildings.json',
 center: [700, 1200], // [lat, lng]
-zoom: -4, // Zoom inicial
+zoom: 0, // Zoom inicial
 description: 'Descripción del Campus 3.',
 photos: [
 { url: '../../../image/locations/CP/galeria/campus/1.webp', isPanoramic: false },
@@ -44,7 +44,7 @@ h: 1521,
 svg: '../../../image/locations/mapa/campus2.svg',
 geojson: '../../../data/campus2_buildings.json',
 center: [700, 1200], // [lat, lng]
-zoom: -4, // Zoom inicial
+zoom: 0, // Zoom inicial
 description: 'Descripción del Campus Sabancuy.',
 photos: [
 { url: '../../../image/locations/CP/galeria/campus/1.webp', isPanoramic: false },
@@ -57,7 +57,7 @@ h: 1521,
 svg: '../../../image/locations/mapa/campus2.svg',
 geojson: '../../../data/campus2_buildings.json',
 center: [700, 1200], // [lat, lng]
-zoom: -4, // Zoom inicial
+zoom: 0, // Zoom inicial
 description: 'Descripción del Jardín Botánico.',
 photos: [
 { url: '../../../image/locations/CP/galeria/campus/1.webp', isPanoramic: false },
@@ -70,7 +70,7 @@ h: 1521,
 svg: '../../../image/locations/mapa/campus2.svg',
 geojson: '../../../data/campus2_buildings.json',
 center: [700, 1200], // [lat, lng]
-zoom: -4, // Zoom inicial
+zoom: 0, // Zoom inicial
 description: 'Descripción del Centro Cultural Universitario.',
 photos: [
 { url: '../../../image/locations/CP/galeria/campus/1.webp', isPanoramic: false },
@@ -83,7 +83,7 @@ h: 1521,
 svg: '../../../image/locations/mapa/campus2.svg',
 geojson: '../../../data/campus2_buildings.json',
 center: [700, 1200], // [lat, lng]
-zoom: -4, // Zoom inicial
+zoom: 0, // Zoom inicial
 description: 'Descripción del Museo Guanal.',
 photos: [
 { url: '../../../image/locations/CP/galeria/campus/1.webp', isPanoramic: false },
@@ -101,12 +101,12 @@ name: 'C-1',
 coords: [475, 1585],
 icon: { iconUrl: '../../../image/locations/CP/pines/pin-fci-c1.svg', color: 'azul-claro' },
 photos: [
-{ url: '../../../image/locations/CP/galeria/c-1/pb.jpg', isPanoramic: false },
-{ url: '../../../image/locations/CP/galeria/c-1/p2.jpg', isPanoramic: false },
-{ url: '../../../image/locations/CP/galeria/c-1/p3.jpg', isPanoramic: false },
-{ url: '../../../image/locations/CP/galeria/c-1/p4.jpg', isPanoramic: false },
-{ url: '../../../image/locations/CP/galeria/c-1/EDIFICIO.webp', isPanoramic: false },
-{ url: '../../../image/locations/CP/galeria/c-1/EDIFICIO1.webp', isPanoramic: false }
+{ url: '../../../image/locations/CP/galeria/C-1/pb.jpg', isPanoramic: false },
+{ url: '../../../image/locations/CP/galeria/C-1/p2.jpg', isPanoramic: false },
+{ url: '../../../image/locations/CP/galeria/C-1/p3.jpg', isPanoramic: false },
+{ url: '../../../image/locations/CP/galeria/C-1/p4.jpg', isPanoramic: false },
+{ url: '../../../image/locations/CP/galeria/C-1/EDIFICIO.webp', isPanoramic: false },
+{ url: '../../../image/locations/CP/galeria/C-1/EDIFICIO1.webp', isPanoramic: false }
 ],
 comments: 'Este edificio es la planta principal de la Facultad de Ciencias de la Información, fundada en 1980. Es conocido por su biblioteca especializada y laboratorios de computación.',
 floors: 4 // Ejemplo: 3 pisos para este edificio
