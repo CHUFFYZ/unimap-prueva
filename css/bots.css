@@ -53,7 +53,7 @@ p {
     margin: 20px 0;
     text-align: left;
 }
-.info-box p{
+.info-box p {
     text-align: center;
 }
 .info-box strong {
@@ -66,7 +66,6 @@ p {
     flex-direction: column;
     gap: 20px;
 }
-
 
 ul {
     list-style-type: disc;
@@ -127,15 +126,16 @@ a:hover {
     border: 2px solid #8e6ee3;
     color: white;
 }
-.desarrolladores{
+
+.desarrolladores {
     background: #f0f0f000;
     padding: 20px;
     border-radius: 10px;
     text-align: center;
-    margin: 10px ;
+    margin: 10px;
     width: auto;
 }
-.desarrolladores h1{
+.desarrolladores h1 {
     font-size: 25px;
 }
 
@@ -148,38 +148,60 @@ a:hover {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     margin-bottom: 10px;
     text-align: center;
+    position: relative;
 }
-.click{
+
+.sereniti-highlight {
+    background: linear-gradient(135deg, #fff3e0 0%, #ffebee 100%);
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+.award-badge {
+    position: absolute;
+    top: -15px;
+    right: -15px;
+    background: #ffd700;
+    color: #333;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 8px 15px;
+    border-radius: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transform: rotate(15deg);
+}
+
+.click {
     align-items: center;
     background: white;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     cursor: pointer;
-    transition: transform 0.3s ease, width 0.3s ease; 
+    transition: transform 0.3s ease, width 0.3s ease;
 }
-.click:hover{
-    transform: scale(1.01); 
+.click:hover {
+    transform: scale(1.01);
     box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
 }
-.click p{
+.click p {
     margin: 0px;
     margin-top: -15px;
     color: #2196F3;
 }
-.click h3{
+.click h3 {
     margin: 0px;
     margin-bottom: -15px;
 }
+
 .bot {
     display: flex;
     align-items: center;
     background: rgba(255, 255, 255, 0);
     margin-left: 10px;
-    margin-right: 10PX;
+    margin-right: 10px;
     margin: 20px 0;
     padding: 15px;
     border-radius: 10px;
-    /*box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);*/
     cursor: pointer;
 }
 .bot img {
@@ -187,9 +209,9 @@ a:hover {
     height: 100px;
     border-radius: 20%;
     margin-right: 15px;
-    transition: transform 0.3s ease, width 0.3s ease; 
+    transition: transform 0.3s ease, width 0.3s ease;
 }
-.bot img:hover{
+.bot img:hover {
     transform: scale(1.2);
 }
 .bot h3 {
@@ -202,7 +224,7 @@ a:hover {
     text-align: justify;
     margin-left: 10px;
 }
-.lista{
+.lista {
     margin-left: 30px !important;
 }
 
@@ -211,14 +233,6 @@ a:hover {
     gap: 10px;
     justify-content: center;
     flex-wrap: wrap;
-}
-.step-image-n {
-    max-width: 20%;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-top: 10px;
 }
 .step-image-n {
     max-width: 20%;
@@ -235,20 +249,17 @@ a:hover {
         margin: 10px;
         padding: 10px;
     }
-    .container h1{
+    .container h1 {
         margin-top: 25px;
     }
-
     h1 {
         font-size: 1.8rem;
         margin-top: 10px;
         margin-bottom: 5px;
     }
-
     h2 {
         font-size: 1.3rem;
     }
-
     p {
         font-size: .9rem;
     }
@@ -260,7 +271,7 @@ a:hover {
         padding: 10px;
         margin-bottom: 10px;
     }
-    .desarrolladores{
+    .desarrolladores {
         padding: 0;
         width: auto;
         margin: 0px;
@@ -269,16 +280,20 @@ a:hover {
         margin-bottom: 0px;
         margin-right: 0px;
     }
-    .bot{
+    .bot {
         margin: 0px 0px;
     }
-    .back-button{
+    .back-button {
         top: 10px;
         right: 13px;
     }
-    .lista{
-    margin-left: 35px !important;
+    .lista {
+        margin-left: 35px !important;
     }
-
+    .award-badge {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+        top: -10px;
+        right: -10px;
+    }
 }
-

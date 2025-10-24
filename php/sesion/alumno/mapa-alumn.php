@@ -50,6 +50,7 @@ ob_end_flush();
     <link rel="stylesheet" href="../../../css/mapa.css">
     <link rel="stylesheet" href="../../../css/global.css">
     <link rel="stylesheet" href="../../../css/niveles-piso.css">
+    <link rel="stylesheet" href="../../../css/rutas.css">
 </head>
 <body>
     <div class="pantalla-bienvenida" id="pantallaBienvenida">
@@ -93,7 +94,7 @@ ob_end_flush();
                     <a class="boton" data-key="opcregist" href="../../back-end/global-back-end/cerrar-sesion.php">Cerrar Sesión</a>
                 </div>
             </div>
-<!-- -->
+<!-- 
                 <div class="idioma">
                     <div class="language-switcher">
                         <select id="languageSelector">
@@ -102,7 +103,7 @@ ob_end_flush();
                             <option value="fr">Français</option>
                         </select>
                     </div>
-                </div> 
+                </div> -->
         </div>
         <div class="unimap">
             <div class="containerlogo">
@@ -118,7 +119,7 @@ ob_end_flush();
         <div class="menu-toggle" id="menu-toggle">☰</div>
         <div class="menu-container" id="menu-container">
             <div class="aboutme menu-option">
-                <a class="btn" data-key="opccalendario" href="html/bots.html">Bots</a>
+                <a class="btn" data-key="opccalendario" href="../../../html/bots.html">Bots</a>
             </div> 
             <div class="aboutme menu-option">
                 <a class="btn" data-key="opccalendario" onclick="showPopup()">Mostrar AFIS</a>
@@ -210,7 +211,8 @@ ob_end_flush();
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.pannellum.org/2.5/pannellum.js"></script>
     <script src="../../../js/locations.js"></script>
-    <script src="../../../js/zoom2.js"></script>
+    <script src="../../../js/zoom3.js"></script>
+    <script src="../../../js/zoom4.js"></script>
     <script src="../../../js/global.js"></script>
     <script src="../../../js/menu.js"></script>
     <script src="../../../js/menu-usuario.js"></script>

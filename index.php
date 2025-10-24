@@ -48,9 +48,16 @@ if (!empty($_SESSION)) {
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/normalize.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.pannellum.org/2.5/pannellum.css">
     <link rel="shortcut icon" href="image/iconos/logo/LogoBlanco1.svg">
-    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/mapa.css">
+    
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/niveles-piso.css">
+    <link rel="stylesheet" href="css/rutas.css">
+    <link rel="stylesheet" href="css/especial.css">
+
 </head>
 <body>
     <div class="pantalla-bienvenida" id="pantallaBienvenida">
@@ -120,25 +127,50 @@ if (!empty($_SESSION)) {
     </div>
     <div id="map-container">
         <div id="map"></div>
+        <div id="osm-map"></div>
     </div>
-    <div class="palpitante"></div>
-    <div class="palpitante2">
-        <h2 data-key="msjconsedif"><-- ¡Consulta Edificios Aqui!</h2>
-    </div>
+    
     <div id="guia-container">
         <div class="palpitante3">
             <i class="fa-solid fa-magnifying-glass" aria-label="Abrir panel de ubicaciones"></i>
         </div>
+        <div class="palpitante2">
+            <h2><-- ¡Consulta Edificios Aquí!</h2>
+        </div>
         <div id="location-controls"></div>
+        <div id="location-details"></div>
     </div>
+    
+    <div id="guia-container2">
+        <div class="palpitante5">
+            <i class="fa-solid fa-magnifying-glass" aria-label="Abrir panel de ubicaciones"></i>
+        </div>
+        <div class="palpitante4">
+            <h2><-- ¡Consulta lugares Aquí!</h2>
+        </div>
+        <div id="location-controls2"></div>
+        <div id="osm-location-details" class="location-details"></div>
+    </div>
+    <div id="fullscreen-image">
+            <span class="fullscreen-close-btn">×</span>
+            <img src="" alt="Imagen en pantalla completa">
+            <video src="" alt="" style="display: none;"></video>
+    </div>
+    <div id="panorama-viewer" class="panorama-container">
+            <div id="panorama"></div>
+            <span class="panorama-close-btn">×</span>
+    </div>
+    <div id="popup-overlay" class="popup-overlay"></div>
     <div class="barra">
         <p><span data-key="msjcopyright">&copy; 2025 UNIMAP. Todos los derechos reservados.</span></p>
     </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="js/zoom.js"></script>
+    <script src="https://cdn.pannellum.org/2.5/pannellum.js"></script>
+    <script src="js/locations2.js"></script>
+    <script src="js/zoom5.js"></script>
+    <script src="js/zoom6.js"></script>
+    <script src="js/global.js"></script>
     <script src="js/menu.js"></script>
     <script src="js/menu-usuario.js"></script>
-    <script src="js/global.js"></script>
-    <script src="js/lenguaje.js"></script>
 </body>
 </html>

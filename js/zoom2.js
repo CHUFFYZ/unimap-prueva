@@ -10,16 +10,19 @@ let geolocationActive = false;
 let currentPinMarker = null;
 let userMarker = null;
 let accuracyCircle = null;
-let routeLayer = null;
+let routeLayers = {};
+let stopMarkers = [];
 let currentDestination = null;
 let firstGeoUpdate = false;
 let currentCampus = 'Campus Principal';
 let ignoreNextZoomEnd = false;
-
+let routesMenu = null;
+let routesActive = false;
+let selectedRoutes = [];
+let busAnimations = {}; // Added for bus animations
 let fullscreenCloseListener = null;
 let panoramaCloseListener = null;
 let geolocationWatchId = null;
-
 let currentFloorOverlay = null;
 let levelMenu = null;
 let buildingMarker = null;
@@ -66,6 +69,14 @@ function switchToCampus(campus) {
     if (levelMenu) {
         document.body.removeChild(levelMenu);
         levelMenu = null;
+    }
+    // Close routes menu when switching to vectorized map
+    if (routesMenu) {
+        routesMenu.style.display = 'none';
+        routesActive = false;
+        const routesButton = document.querySelector('.leaflet-control-routes');
+        if (routesButton) routesButton.classList.remove('active');
+        clearRoutesAndStops();
     }
 }
 
@@ -261,11 +272,13 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
             .join('')
         : '<p>Imágenes y videos muy pronto, si quieres probarlas ve a puntos de interés o edificios C-1 de la Facultad de Ciencias de la Información y C del área de Centro de Idiomas.</p>';
     const commentsHTML = safeComments.map(comment => `<p>${comment}</p>`).join('');
+    const buildingData = locations[campus][building].places.find(p => p.name === placeName);
+    const hasLevelExploration = buildingData && buildingData.hasLevelExploration && buildingData.floors > 0;
     let innerHTML = `
         <span class="close-btn">×</span>
         <h2>Zona: ${placeName}</h2>
         <div class="top">
-            <span class="explore-levels"><i class="fas fa-layer-group"></i>Exploración por niveles</span>
+            ${hasLevelExploration ? `<span class="explore-levels"><i class="fas fa-layer-group"></i>Exploración por niveles</span>` : ''}
             <span class="rute"><i class="fas fa-layer-group"></i>Como llegar</span>
         </div>
         <div class="faculty">${faculty}</div>
@@ -299,11 +312,13 @@ function showLocationDetails(building, placeName, faculty, photos, comments, cam
             }, { once: true });
         }
     }
-    const exploreLevels = detailsPanel.querySelector('.explore-levels');
-    if (exploreLevels) {
-        exploreLevels.addEventListener('click', () => {
-            startLevelExploration(campus, building, placeName);
-        });
+    if (hasLevelExploration) {
+        const exploreLevels = detailsPanel.querySelector('.explore-levels');
+        if (exploreLevels) {
+            exploreLevels.addEventListener('click', () => {
+                startLevelExploration(campus, building, placeName);
+            });
+        }
     }
     const photoItems = detailsPanel.querySelectorAll('.photo-item');
     photoItems.forEach(item => {
@@ -593,6 +608,135 @@ function createInterestPinMarker(lat, lng, title, building, campus) {
     }
 }
 
+function createStopMarker(lat, lng, name, routeIds, campus) {
+    const stopIcon = L.icon({
+        iconUrl: '../../../image/pines/bus-stop.svg',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16]
+    });
+    const routeNames = routeIds.map(id => truckRoutes.find(r => r.id === id)?.name || '').join(', ');
+    const marker = L.marker([lat, lng], {
+        icon: stopIcon,
+        title: name
+    }).bindPopup(`<b>Parada: ${name}</b><br><small>Rutas: ${routeNames}</small>`);
+    marker.on('click', () => {
+        flyToOSMLocation(lat, lng, campus);
+        showOSMLocationDetails(
+            name,
+            name,
+            'Parada de Camión',
+            [], // Add photos if available
+            `Parada de las rutas: ${routeNames}`,
+            campus
+        );
+    });
+    return marker;
+}
+
+function updateStopMarkers() {
+    stopMarkers.forEach(marker => osmMap.removeLayer(marker));
+    stopMarkers = [];
+    const stopMap = new Map();
+    selectedRoutes.forEach(routeId => {
+        const route = truckRoutes.find(r => r.id === routeId);
+        if (route && route.stops) {
+            route.stops.forEach(stop => {
+                const key = `${stop.coords[1]},${stop.coords[0]}`;
+                if (!stopMap.has(key)) {
+                    stopMap.set(key, { name: stop.name, coords: stop.coords, routeIds: [route.id], campus: 'Campus Principal' });
+                } else {
+                    const existing = stopMap.get(key);
+                    if (!existing.routeIds.includes(route.id)) {
+                        existing.routeIds.push(route.id);
+                    }
+                }
+            });
+        }
+    });
+    stopMap.forEach(stop => {
+        const marker = createStopMarker(stop.coords[0], stop.coords[1], stop.name, stop.routeIds, stop.campus);
+        marker.addTo(osmMap);
+        stopMarkers.push(marker);
+    });
+}
+
+function animateBusOnRoute(routeId) {
+    const route = truckRoutes.find(r => r.id === routeId);
+    if (!route || !route.isCircular) return;
+
+    const busIcon = L.icon({
+        iconUrl: '../../../image/pines/bus-icon.svg',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+    });
+
+    const coordinates = route.path.coordinates.map(([lng, lat]) => [lat, lng]);
+    const busMarker = L.marker(coordinates[0], { icon: busIcon }).addTo(osmMap);
+    busAnimations[routeId] = {
+        marker: busMarker,
+        index: 0,
+        stop: () => {
+            osmMap.removeLayer(busMarker);
+        }
+    };
+
+    function moveBus() {
+        const anim = busAnimations[routeId];
+        if (!anim) return;
+        anim.index = (anim.index + 1) % coordinates.length;
+        const nextPos = coordinates[anim.index];
+        anim.marker.setLatLng(nextPos);
+        setTimeout(moveBus, 1000); // Adjust speed (ms per step)
+    }
+    moveBus();
+}
+
+function toggleRouteDisplay(routeId) {
+    const route = truckRoutes.find(r => r.id === routeId);
+    if (!route) return;
+    if (selectedRoutes.includes(routeId)) {
+        selectedRoutes = selectedRoutes.filter(id => id !== routeId);
+        if (routeLayers[routeId]) {
+            osmMap.removeLayer(routeLayers[routeId]);
+            delete routeLayers[routeId];
+        }
+        if (busAnimations[routeId]) {
+            busAnimations[routeId].stop();
+            delete busAnimations[routeId];
+        }
+    } else {
+        selectedRoutes.push(routeId);
+        routeLayers[routeId] = L.geoJSON(route.path, {
+            style: { color: '#1100ffff', weight: 5, opacity: 0.7 }
+        }).addTo(osmMap);
+        if (route.isCircular) {
+            animateBusOnRoute(routeId);
+        }
+    }
+    if (selectedRoutes.length > 0) {
+        const group = new L.FeatureGroup(Object.values(routeLayers));
+        osmMap.fitBounds(group.getBounds(), { padding: [50, 50] });
+    }
+    updateStopMarkers();
+}
+
+function clearRoutesAndStops() {
+    Object.keys(routeLayers).forEach(key => {
+        if (key !== 'navigation' && routeLayers[key]) {
+            osmMap.removeLayer(routeLayers[key]);
+        }
+    });
+    routeLayers = routeLayers['navigation'] ? { navigation: routeLayers['navigation'] } : {};
+    selectedRoutes = [];
+    stopMarkers.forEach(marker => osmMap.removeLayer(marker));
+    stopMarkers = [];
+    Object.keys(busAnimations).forEach(routeId => {
+        busAnimations[routeId].stop();
+        delete busAnimations[routeId];
+    });
+}
+
 function toggleGeolocation() {
     const geolocationButton = document.querySelector('.leaflet-control-geolocation');
     if (!geolocationActive) {
@@ -638,10 +782,10 @@ function toggleGeolocation() {
                     fetch(url)
                         .then(response => response.json())
                         .then(data => {
-                            if (routeLayer) osmMap.removeLayer(routeLayer);
+                            if (routeLayers['navigation']) osmMap.removeLayer(routeLayers['navigation']);
                             if (data.routes && data.routes.length > 0) {
                                 const geometry = data.routes[0].geometry;
-                                routeLayer = L.geoJSON(geometry, {
+                                routeLayers['navigation'] = L.geoJSON(geometry, {
                                     style: { color: '#3880ff', weight: 5, opacity: 0.7 }
                                 }).addTo(osmMap);
                             }
@@ -672,9 +816,9 @@ function toggleGeolocation() {
             osmMap.removeLayer(accuracyCircle);
             accuracyCircle = null;
         }
-        if (routeLayer) {
-            osmMap.removeLayer(routeLayer);
-            routeLayer = null;
+        if (routeLayers['navigation']) {
+            osmMap.removeLayer(routeLayers['navigation']);
+            delete routeLayers['navigation'];
         }
         currentDestination = null;
     }
@@ -682,9 +826,9 @@ function toggleGeolocation() {
 
 function flyToOSMLocation(lat, lng, campus) {
     if (!osmMap) return;
-    if (routeLayer) {
-        osmMap.removeLayer(routeLayer);
-        routeLayer = null;
+    if (routeLayers['navigation']) {
+        osmMap.removeLayer(routeLayers['navigation']);
+        delete routeLayers['navigation'];
     }
     if (geolocationActive && userMarker) {
         currentDestination = { lat: lat, lng: lng, campus: campus };
@@ -695,10 +839,10 @@ function flyToOSMLocation(lat, lng, campus) {
             .then(data => {
                 if (data.routes && data.routes.length > 0) {
                     const geometry = data.routes[0].geometry;
-                    routeLayer = L.geoJSON(geometry, {
+                    routeLayers['navigation'] = L.geoJSON(geometry, {
                         style: { color: '#3880ff', weight: 5, opacity: 0.7 }
                     }).addTo(osmMap);
-                    osmMap.flyToBounds(routeLayer.getBounds(), {
+                    osmMap.flyToBounds(routeLayers['navigation'].getBounds(), {
                         padding: [50, 50],
                         duration: 1.5
                     });
@@ -848,15 +992,8 @@ function updateLocationControls() {
         }
     });
 }
+
 const campusColors = {
-    /*
-    'Campus Principal': 'blue',
-    'Campus 2': 'green',
-    'Campus 3': 'red',
-    'Jardin Botanico': 'purple',
-    'Centro Cultural Universitario': 'orange',
-    'Museo Guanal': 'yellow',
-    'Campus Sabancuy': 'cyan'*/
     'Campus Principal': 'yellow',
     'Campus 2': 'yellow',
     'Campus 3': 'yellow',
@@ -865,6 +1002,7 @@ const campusColors = {
     'Museo Guanal': 'gris',
     'Campus Sabancuy': 'yellow'
 };
+
 function updateOSMLocationControls() {
     const locationControls2 = document.getElementById('location-controls2');
     if (!locationControls2) return;
@@ -880,7 +1018,7 @@ function updateOSMLocationControls() {
     Object.keys(osmMap.campusMarkers).forEach(campus => {
         const marker = osmMap.campusMarkers[campus];
         const [lat, lng] = [marker.getLatLng().lat, marker.getLatLng().lng];
-        const colorClass = `marker-${campusColors[campus]}`; // Obtener la clase de color del campus
+        const colorClass = `marker-${campusColors[campus]}`;
         controlsHTML += `
             <a href="#" class="osm-location-link ${colorClass}" 
                onclick="flyToOSMLocation(${lat}, ${lng}, '${campus}')"
@@ -904,6 +1042,136 @@ function updateOSMLocationControls() {
     }
 }
 
+function showRoutesMenu() {
+    if (!routesMenu) {
+        routesMenu = document.createElement('div');
+        routesMenu.id = 'routes-menu';
+        document.body.appendChild(routesMenu);
+    }
+    routesActive = !routesActive;
+    const routesButton = document.querySelector('.leaflet-control-routes');
+    if (routesActive) {
+        routesButton.classList.add('active');
+        updateRoutesMenu();
+        routesMenu.style.display = 'block';
+        history.pushState({ menu: 'routes-menu' }, null, '');
+        selectedRoutes.forEach(routeId => {
+            const route = truckRoutes.find(r => r.id === routeId);
+            if (route && route.isCircular && !busAnimations[routeId]) {
+                animateBusOnRoute(routeId);
+            }
+        });
+    } else {
+        routesButton.classList.remove('active');
+        routesMenu.style.display = 'none';
+        history.replaceState(null, null, '');
+        clearRoutesAndStops();
+    }
+}
+
+function updateRoutesMenu() {
+    if (!routesMenu) return;
+    let menuHTML = `
+        <span id="close-routes-menu">×</span>
+        <h3>Rutas de Camiones</h3>
+        <div id="routes-list">`;
+    truckRoutes.forEach(route => {
+        const isSelected = selectedRoutes.includes(route.id);
+        menuHTML += `
+            <div class="route-item" data-route-id="${route.id}">
+                <span class="route-checkmark" style="display: ${isSelected ? 'inline' : 'none'};">✅</span>
+                <span class="route-name">${route.name}</span>
+            </div>`;
+    });
+    menuHTML += '</div>';
+    routesMenu.innerHTML = menuHTML;
+    const closeBtn = document.getElementById('close-routes-menu');
+    closeBtn.addEventListener('click', () => {
+        routesMenu.style.display = 'none';
+        routesActive = false;
+        const routesButton = document.querySelector('.leaflet-control-routes');
+        if (routesButton) routesButton.classList.remove('active');
+        clearRoutesAndStops();
+        history.replaceState(null, null, '');
+    }, { once: true });
+    document.querySelectorAll('.route-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const routeId = item.dataset.routeId;
+            toggleRouteDisplay(routeId);
+            updateRoutesMenu();
+            updateStopMarkers();
+        });
+    });
+}
+
+function createMarker(lat, lng, title, building, iconConfig, faculty, photos, comments, campus, isShared = false) {
+    const customIcon = L.divIcon({
+        className: `marker-${iconConfig.color}`,
+        html: `
+            <div class="marker-inner" style="
+                background-image: url('${iconConfig.iconUrl}');
+                background-size: contain;
+                background-repeat: no-repeat;
+                width: 32px;
+                height: 32px;
+                transform-origin: bottom center;
+            "></div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+    });
+    const popupContent = isShared
+        ? `<b>${building}</b><br><small>${locations[campus][building].places.map(p => p.name).join(', ')}</small>`
+        : `<b>Edificio: ${title}</b><br><small>${building}</small>`;
+    const marker = L.marker([lat, lng], {
+        title: isShared ? building : title,
+        icon: customIcon
+    }).bindPopup(popupContent);
+    marker.on('click', () => {
+        flyToLocation(lat, lng, building, isShared ? building : title, campus);
+        showLocationDetails(
+            building,
+            isShared ? building : title,
+            faculty,
+            photos || [],
+            isShared ? 'Múltiples edificios: ' + locations[campus][building].places.map(p => p.name).join(', ') : (comments || 'No hay comentarios disponibles.'),
+            campus
+        );
+    });
+    marker.on('popupopen', () => {
+        const popupElement = marker._popup._container.querySelector('.leaflet-popup-content-wrapper');
+        if (popupElement) {
+            popupElement.style.cursor = 'pointer';
+            popupElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                flyToLocation(lat, lng, building, isShared ? building : title, campus);
+                showLocationDetails(
+                    building,
+                    isShared ? building : title,
+                    faculty,
+                    photos || [],
+                    isShared ? 'Múltiples edificios: ' + locations[campus][building].places.map(p => p.name).join(', ') : (comments || 'No hay comentarios disponibles.'),
+                    campus
+                );
+            }, { once: true });
+        }
+    });
+    marker.on('popupclose', function() {
+        if (marker._icon) {
+            marker._icon.classList.remove('marker-animated');
+        }
+        const popupElement = document.querySelector('.leaflet-popup-content-wrapper');
+        if (popupElement) {
+            popupElement.classList.remove('popup-animated');
+        }
+    });
+    if (!markers[campus][building]) markers[campus][building] = [];
+    markers[campus][building].push(marker);
+    markersLayers[campus].addLayer(marker);
+    return marker;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const mapElement = document.getElementById('map');
     const osmMapElement = document.getElementById('osm-map');
@@ -915,7 +1183,6 @@ document.addEventListener('DOMContentLoaded', function() {
         crs: L.CRS.Simple,
         minZoom: -1.5,
         maxZoom: 4,
-        /*lol*/
         maxBoundsViscosity: 1.0,
         zoomDelta: 0.3,
         zoomSnap: 0,
@@ -1009,7 +1276,6 @@ document.addEventListener('DOMContentLoaded', function() {
             'Jardin Botanico': '../../../image/locations/CP/pines/pin-jb.svg',
             'Centro Cultural Universitario': '../../../image/locations/CP/pines/pin-ccu.svg',
             'Museo Guanal': '../../../image/locations/CP/pines/pin-mg.svg'
-            
         };
         osmMap.campusMarkers = {
             'Campus Principal': L.marker([18.646626696426264, -91.81813061518552], {
@@ -1068,7 +1334,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     iconAnchor: [32, 64]
                 })
             }),
-            
         };
         Object.entries(osmMap.campusMarkers).forEach(([campus, marker]) => {
             marker.addTo(osmMap);
@@ -1211,6 +1476,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (guiaContainer) guiaContainer.style.display = 'block';
             if (guiaContainer2) guiaContainer2.style.display = 'none';
+            // Close routes menu when switching to vectorized map
+            if (routesMenu) {
+                routesMenu.style.display = 'none';
+                routesActive = false;
+                const routesButton = document.querySelector('.leaflet-control-routes');
+                if (routesButton) routesButton.classList.remove('active');
+                clearRoutesAndStops();
+                history.replaceState(null, null, '');
+            }
         } else if (!isOSMVisible && !fromOSM) {
             if (currentZoom >= thresholdZoom) {
                 mapElement.style.display = 'block';
@@ -1348,6 +1622,15 @@ document.addEventListener('DOMContentLoaded', function() {
             onAdd: function(map) {
                 const container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar');
                 const zoomDelta = 0.3;
+                const routes = L.DomUtil.create('a', 'leaflet-control-routes', container);
+                routes.innerHTML = '<i class="fas fa-bus"></i>';
+                routes.href = '#';
+                routes.title = 'Ver Rutas de Camiones';
+                L.DomEvent.on(routes, 'click', function(e) {
+                    L.DomEvent.preventDefault(e);
+                    L.DomEvent.stopPropagation(e);
+                    showRoutesMenu();
+                });
                 const geolocation = L.DomUtil.create('a', 'leaflet-control-geolocation', container);
                 geolocation.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
                 geolocation.href = '#';
@@ -1402,73 +1685,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         osmMap.removeControl(osmMap.zoomControl);
         osmMap.addControl(new L.Control.CustomZoomOSM({ position: 'topleft' }));
-    }
-    function createMarker(lat, lng, title, building, iconConfig, faculty, photos, comments, campus, isShared = false) {
-        const customIcon = L.divIcon({
-            className: `marker-${iconConfig.color}`,
-            html: `
-                <div class="marker-inner" style="
-                    background-image: url('${iconConfig.iconUrl}');
-                    background-size: contain;
-                    background-repeat: no-repeat;
-                    width: 32px;
-                    height: 32px;
-                    transform-origin: bottom center;
-                "></div>
-            `,
-            iconSize: [32, 32],
-            iconAnchor: [16, 32],
-            popupAnchor: [0, -32]
-        });
-        const popupContent = isShared
-            ? `<b>${building}</b><br><small>${locations[campus][building].places.map(p => p.name).join(', ')}</small>`
-            : `<b>Edificio: ${title}</b><br><small>${building}</small>`;
-        const marker = L.marker([lat, lng], {
-            title: isShared ? building : title,
-            icon: customIcon
-        }).bindPopup(popupContent);
-        marker.on('click', () => {
-            flyToLocation(lat, lng, building, isShared ? building : title, campus);
-            showLocationDetails(
-                building,
-                isShared ? building : title,
-                faculty,
-                photos || [],
-                isShared ? 'Múltiples edificios: ' + locations[campus][building].places.map(p => p.name).join(', ') : (comments || 'No hay comentarios disponibles.'),
-                campus
-            );
-        });
-        marker.on('popupopen', () => {
-            const popupElement = marker._popup._container.querySelector('.leaflet-popup-content-wrapper');
-            if (popupElement) {
-                popupElement.style.cursor = 'pointer';
-                popupElement.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    flyToLocation(lat, lng, building, isShared ? building : title, campus);
-                    showLocationDetails(
-                        building,
-                        isShared ? building : title,
-                        faculty,
-                        photos || [],
-                        isShared ? 'Múltiples edificios: ' + locations[campus][building].places.map(p => p.name).join(', ') : (comments || 'No hay comentarios disponibles.'),
-                        campus
-                    );
-                }, { once: true });
-            }
-        });
-        marker.on('popupclose', function() {
-            if (marker._icon) {
-                marker._icon.classList.remove('marker-animated');
-            }
-            const popupElement = document.querySelector('.leaflet-popup-content-wrapper');
-            if (popupElement) {
-                popupElement.classList.remove('popup-animated');
-            }
-        });
-        if (!markers[campus][building]) markers[campus][building] = [];
-        markers[campus][building].push(marker);
-        markersLayers[campus].addLayer(marker);
-        return marker;
     }
     const infoIcon = document.querySelector('.palpitante3 .fa-magnifying-glass');
     const locationControls = document.getElementById('location-controls');
@@ -1549,7 +1765,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 (point.photos || []).map(photo => typeof photo === 'object' ? photo.url : photo)
             )
         ),
-        '../image/pines/pin-usuario.svg'
+        '../image/pines/pin-usuario.svg',
+        '../image/pines/bus-stop.svg',
+        '../image/pines/bus-icon.svg' // Added bus icon
     ].filter(url => url);
     preloadImages(imageUrls);
     let controlsHTML = `
@@ -1568,7 +1786,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return [sumLat + place.coords[0], sumLng + place.coords[1]];
                 }, [0, 0]);
                 const avgCoords = [coords[0]/data.places.length, coords[1]/data.places.length];
-                createMarker(avgCoords[0], avgCoords[1], building, building, data.icon, building, [], '', campus, true);
+                createMarker(avgCoords[0], avgCoords[0], avgCoords[1], building, building, data.icon, building, [], '', campus, true);
                 controlsHTML += `
                     <a href="#" class="location-link marker-${data.icon.color}" 
                        onclick="flyToLocation(${avgCoords[0]}, ${avgCoords[1]}, '${building}', '${building}', '${campus}')"
